@@ -1,0 +1,1264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:element name="cxml">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="header"/>
+				<xs:element ref="data" minOccurs="1" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="header">
+		<xs:annotation>
+			<xs:documentation>Metadata about production center and base time
+			of the analysis and/or forecast</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="product"/>
+				<xs:element ref="trackingDomain" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="generatingApplication"/>
+				<xs:element ref="productionCenter"/>
+				<xs:element ref="moreInfo" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="moreMetadata" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="baseTime" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="creationTime"/>
+				<xs:element ref="spatialReferenceSystem" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="missing" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="product" type="xs:string"/>
+	<xs:element name="trackingDomain" type="xs:string"/>
+
+	<xs:element name="generatingApplication">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="applicationType"/>
+				<xs:element ref="model" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element ref="ensemble" minOccurs="0" maxOccurs="1"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="applicationType" type="xs:string"/>
+
+	<xs:element name="model">
+		<xs:annotation>
+			<xs:documentation>Information about the NWP model producing the analysis or forecast</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="name"/>
+				<xs:element ref="domain"/>
+				<xs:element ref="modelResolution" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="dataResolution" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="productionStatus" minOccurs="0" maxOccurs="1"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="name" type="xs:normalizedString"/>
+	<xs:element name="domain" type="xs:normalizedString"/>
+
+	<xs:element name="modelResolution" type="xs:normalizedString">
+		<xs:annotation>
+			<xs:documentation>Resolution at which model is run</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="dataResolution">
+		<xs:annotation>
+			<xs:documentation>Grid resolution of distributed data</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="productionStatus">
+		<xs:annotation>
+			<xs:documentation>Same as GRIB2 'productionStatusOfProcessedData'</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="prod"/>
+				<xs:enumeration value="test"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="ensemble">
+		<xs:annotation>
+			<xs:documentation>Information about the ensemble prediction system</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="numMembers"/>
+				<xs:element ref="perturbationMethod"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="numMembers" type="xs:integer"/>
+	<xs:element name="perturbationMethod" type="xs:normalizedString"/>
+
+	<xs:element name="productionCenter">
+		<xs:complexType mixed="true">
+			<xs:sequence>
+				<xs:element ref="subCenter" minOccurs="0" maxOccurs="1"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="subCenter" type="xs:string"/>
+	<xs:element name="moreInfo" type="xs:anyURI"/>
+	<xs:element name="moreMetadata" type="xs:anyURI"/>
+	<xs:element name="baseTime" type="xs:dateTime"/>
+	<xs:element name="creationTime" type="xs:dateTime"/>
+
+	<xs:element name="spatialReferenceSystem">
+		<xs:annotation>
+			<xs:documentation>Information about the spatial reference system used
+			to go between latitude/longitude and distance on the earth</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="name"/>
+				<xs:element ref="radius" minOccurs="0" maxOccurs="1"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="missing" type="xs:normalizedString">
+		<xs:annotation>
+			<xs:documentation>Optional string or numerical value used to represent missing data (ex: -999).
+			Note that missing numerical data can also be represented by including xsi:nil="true" in the tag.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="data">
+		<xs:annotation>
+			<xs:documentation>Data content of the analysis or forecast.
+			The type can be 'analysis', 'forecast' or 'ensembleForecast'
+			Normally a file would have only one type of data
+			but in some cases it may be desirable to have both an analysis and a forecast.
+			Several disturbances (cyclones) can be included in a single data element.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="disturbance" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="type" use="required" type="dataType"/>
+			<xs:attribute name="member" use="optional" type="xs:nonNegativeInteger"/>
+			<xs:attribute name="perturb" use="optional" type="perturbType"/>
+			<xs:attribute name="origin" use="optional" type="xs:normalizedString"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="disturbance">
+		<xs:annotation>
+			<xs:documentation>Data on a particular storm (disturbance)</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="cycloneName" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="cycloneNumber" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="localID" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="basin" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="objectiveTechnique" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="fix" minOccurs="1" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="ID" use="required" type="IDtype"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="cycloneName" type="xs:normalizedString"/>
+	<!-- ATCF - annual cyclone number -->
+	<xs:element name="cycloneNumber" type="xs:integer"/>
+
+	<xs:element name="localID" type="xs:string">
+		<xs:annotation>
+			<xs:documentation>Specified by production center or generating application
+			for its own use</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="basin">
+		<xs:annotation>
+			<xs:documentation>Basin in which the storm is located at analysis time.
+			Either 3-letter abbreviation or full words are acceptable but
+			full name is preferable.</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="ATL"/>
+				<xs:enumeration value="North Atlantic"/>
+				<xs:enumeration value="NEP"/>
+				<xs:enumeration value="Northeast Pacific"/>
+				<xs:enumeration value="NWP"/>
+				<xs:enumeration value="Northwest Pacific"/>
+				<xs:enumeration value="NIO"/>
+				<xs:enumeration value="North Indian"/>
+				<xs:enumeration value="SWI"/>
+				<xs:enumeration value="Southwest Indian"/>
+				<xs:enumeration value="SEI"/>
+				<xs:enumeration value="Southeast Indian"/>
+				<xs:enumeration value="SWP"/>
+				<xs:enumeration value="Southwest Pacific"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="objectiveTechnique" type="xs:string">
+		<xs:annotation>
+			<xs:documentation>Objective technique used to produce forecast or analysis</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="fix">
+		<xs:annotation>
+			<xs:documentation>Position of a disturbance at a particular time</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="validTime"/>
+				<xs:element ref="latitude"/>
+				<xs:element ref="longitude"/>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="subRegion" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="positionCodeNumber" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="satelliteName" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="satelliteSensor" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="fixSite" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="flightLevel" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="navAccuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="missionNumber" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="platform" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="RADOBcode" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="radarSitePosition" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="distanceToNearestData" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="cycloneData" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="hour" use="optional" type="anyNumber"/>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="validTime" type="xs:dateTime"/>
+
+	<xs:element name="latitude">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="posType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="longitude">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="posType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="subRegion" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Subregion within the basin. Some continents have
+			been included to support extra-tropical storm tracking</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="Arabian Sea"/>
+				<xs:enumeration value="Bay of Bengal"/>
+				<xs:enumeration value="Central Pacific"/>
+				<xs:enumeration value="Eastern Pacific"/>
+				<xs:enumeration value="Atlantic"/>
+				<xs:enumeration value="South Pacific"/>
+				<xs:enumeration value="South Indian Ocean"/>
+				<xs:enumeration value="Western Pacific"/>
+				<xs:enumeration value="North America"/>
+				<xs:enumeration value="South America"/>
+				<xs:enumeration value="Europe"/>
+				<xs:enumeration value="Asia"/>
+				<xs:enumeration value="Australia"/>
+				<xs:enumeration value="Africa"/>
+				<xs:enumeration value="Antarctica"/>
+				<xs:enumeration value="Arctic"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="positionCodeNumber">
+		<xs:annotation>
+			<xs:documentation>Used for satellite fixes. 1=eye/geography, 2=eye/ephemeris, 
+			3=well defined circ. center/geography, 4=well defined circ. center/ephemeris, 
+			5=poorly defined circ. center/geography, 6=poorly defined circ. center/ephemeris</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:integer">
+				<xs:minInclusive value="1"/>
+				<xs:maxInclusive value="6"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="satelliteName" type="xs:normalizedString"/>
+	<xs:element name="satelliteSensor" type="xs:normalizedString"/>
+
+	<xs:element name="fixSite" type="xs:normalizedString">
+		<xs:annotation>
+			<xs:documentation>Site or center where fix was determined</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="flightLevel" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Used for aircraft fixes</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="navAccuracy" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Navigational accuracy</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="missionNumber" type="xs:integer" nillable="true"/>
+
+	<xs:element name="platform" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Platform for the radar observations</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="land"/>
+				<xs:enumeration value="ship"/>
+				<xs:enumeration value="aircraft"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="RADOBcode" type="xs:normalizedString" nillable="true"/>
+
+	<xs:element name="radarSitePosition">
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="latitude"/>
+				<xs:element ref="longitude"/>
+				<xs:element ref="WMOidentifier" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="WMOidentifier" type="xs:normalizedString" nillable="true"/>
+
+	<xs:element name="distanceToNearestData" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Used in ATCF for synoptic fix</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="cycloneData">
+		<xs:annotation>
+			<xs:documentation>Data describing the storm's development and status</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="development" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="systemDepth" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="category" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="Dvorak" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="spiralOverlay" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="eye" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="stormMotion" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="cyclonePhase" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="minimumPressure" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="lastClosedIsobar" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="maximumWind" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="maxFlightLevelWind" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="windContours" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="temperature" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="maximumPrecipitation" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="maximumWaveHeight" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="seaContours" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="fixedRadii" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="comments" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="biasCorrected" use="optional" type="xs:boolean"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="development" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Development status of a disturbance</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="disturbance"/>
+				<xs:enumeration value="tropical disturbance"/>
+				<xs:enumeration value="depression"/>
+				<xs:enumeration value="tropical depression"/>
+				<xs:enumeration value="deep depression"/>
+				<xs:enumeration value="tropical storm"/>
+				<xs:enumeration value="moderate tropical storm"/>
+				<xs:enumeration value="severe tropical storm"/>
+				<xs:enumeration value="tropical cyclone"/>
+				<xs:enumeration value="severe tropical cyclone"/>
+				<xs:enumeration value="intense tropical cyclone"/>
+				<xs:enumeration value="very intense tropical cyclone"/>
+				<xs:enumeration value="hurricane"/>
+				<xs:enumeration value="typhoon"/>
+				<xs:enumeration value="super typhoon"/>
+				<xs:enumeration value="cyclonic disturbance"/>
+				<xs:enumeration value="cyclonic storm"/>
+				<xs:enumeration value="severe cyclonic storm"/>
+				<xs:enumeration value="subtropical depression"/>
+				<xs:enumeration value="subtropical storm"/>
+				<xs:enumeration value="extratropical system"/>
+				<xs:enumeration value="inland"/>
+				<xs:enumeration value="dissipating"/>
+				<xs:enumeration value="low"/>
+				<xs:enumeration value="tropical wave"/>
+				<xs:enumeration value="extrapolated"/>
+				<xs:enumeration value="remnant low"/>
+				<xs:enumeration value="post-tropical depression"/>
+				<xs:enumeration value="unknown"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="systemDepth" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Storm depth</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="deep"/>
+				<xs:enumeration value="medium"/>
+				<xs:enumeration value="shallow"/>
+				<xs:enumeration value="unknown"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="category" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Storm category (1-6)</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:integer">
+				<xs:minInclusive value="1"/>
+				<xs:maxInclusive value="6"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="Dvorak">
+		<xs:annotation>
+			<xs:documentation>Satellite-based Dvorak code for TC intensity</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="dataTnumber" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="modelExpectedTnumber" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="patternTnumber" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="finalTnumber"/>
+				<xs:element ref="ongoingChange" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="currentIntensity"/>
+				<xs:element ref="pastChange"/>
+				<xs:element ref="changePeriod"/>
+			</xs:all>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="dataTnumber" type="TnumberType"/>
+	<xs:element name="modelExpectedTnumber" type="TnumberType"/>
+	<xs:element name="patternTnumber" type="TnumberType"/>
+	<xs:element name="finalTnumber" type="TnumberType"/>
+	<xs:element name="currentIntensity" type="TnumberType" nillable="true"/>
+
+	<xs:element name="pastChange">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:pattern value="[D|S|W][0-8].[0-7]"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="ongoingChange">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:pattern value="(MINUS|PLUS)"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="changePeriod" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="timeType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="maximumWind">
+		<xs:annotation>
+			<xs:documentation>Data describing the storm's maximum sustained wind speed</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="speed"/>
+				<xs:element ref="averagingPeriod" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="latitude" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="longitude" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="radius" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="bearing" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="range" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="gusts" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="gustAvgPeriod" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="speed" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="speedType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="averagingPeriod" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="timeType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="radius" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Radial distance at which a threshold value is met.
+			This can be within a particular sector or around the full circle.
+			Sector must be specified (NEQ, SWQ, etc., or AAA for full circle).
+			Default sector is "AAA"</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+					<xs:attribute name="sector" use="optional" type="sectorType"/>
+					<xs:attribute name="source" use="optional" type="sourceType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="bearing" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="angleType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="range" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="gusts" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="speedType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="gustAvgPeriod" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="timeType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="maxFlightLevelWind">
+		<xs:annotation>
+			<xs:documentation>Data describing the storm's maximum sustained wind speed</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="speed"/>
+				<xs:element ref="averagingPeriod" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="directionToward" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="bearing" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="range" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="temperature">
+		<xs:annotation>
+			<xs:documentation>Temperatures in the storm and nearby environment</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="tempOutsideEye" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="tempInsideEye" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="dewpointTemperature" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="seaSurfaceTemperature" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="tempOutsideEye" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="tempType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="tempInsideEye" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="tempType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="dewpointTemperature" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="tempType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="seaSurfaceTemperature" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="tempType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="minimumPressure" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Minimum sea level pressure</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="pressure"/>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="lastClosedIsobar">
+		<xs:annotation>
+			<xs:documentation>Data describing the pressure and radius of the last closed isobar</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="pressure"/>
+				<xs:element ref="radius" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="pressure" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="pressureType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="eye">
+		<xs:annotation>
+			<xs:documentation>Data describing the cyclone's eye</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="shape" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="orientation" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="diameter" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="shortAxis" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="wallCloudThickness" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="percentWallObserved" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="shape" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Shape of the cyclone's eye</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="circular"/>
+				<xs:enumeration value="elliptic"/>
+				<xs:enumeration value="concentric"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="orientation" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="angleType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="diameter" nillable="true">
+		<xs:annotation>
+			<xs:documentation>If storm is elliptic then this element describes the long axis</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="shortAxis" nillable="true">
+		<xs:annotation>
+			<xs:documentation>If storm is not elliptic then omit this element</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="wallCloudThickness" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="percentWallObserved" type="anyNumber" nillable="true"/>
+
+	<xs:element name="spiralOverlay" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="angleType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="cyclonePhase">
+		<xs:annotation>
+			<xs:documentation>Data on cyclone phase from Hart et al. 1993</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="stormRelThkSymmetry"/>
+				<xs:element ref="thermalWindLower"/>
+				<xs:element ref="thermalWindUpper"/>
+			</xs:all>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="stormRelThkSymmetry" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="thermalWindLower" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="speedType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="thermalWindUpper" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="speedType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="stormMotion">
+		<xs:annotation>
+			<xs:documentation>Data describing the storm's speed and direction</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="speed"/>
+				<xs:element ref="directionToward"/>
+				<xs:element ref="speedAccuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="directionAccuracy" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="directionToward" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="angleType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="maximumPrecipitation">
+		<xs:annotation>
+			<xs:documentation>Data describing the storm's maximum precipitation</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="intensity"/>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="latitude" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="longitude" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="precipitationType" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="intensity" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="precipType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="precipitationType" nillable="true">
+		<xs:annotation>
+			<xs:documentation>Dominant precipitation type. If neither
+			"rain" nor "snow" then use "mixed"</xs:documentation>
+		</xs:annotation>
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="rain"/>
+				<xs:enumeration value="snow"/>
+				<xs:enumeration value="mixed"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+
+	<xs:element name="maximumWaveHeight">
+		<xs:annotation>
+			<xs:documentation>Data describing the storm's maximum wave height</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:all>
+				<xs:element ref="height"/>
+				<xs:element ref="accuracy" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="latitude" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="longitude" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="height">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="lengthType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="windContours">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="windSpeed" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="windSpeed">
+		<xs:complexType mixed="true">
+			<xs:sequence>
+				<xs:element ref="radius" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="units" use="required" type="speedType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="seaContours">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="waveHeight" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="waveHeight">
+		<xs:complexType mixed="true">
+			<xs:sequence>
+				<xs:element ref="radius" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="units" use="required" type="lengthType"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="fixedRadii">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="fixedRadius" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="source" use="optional" type="sourceType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="fixedRadius">
+		<xs:complexType mixed="true">
+			<xs:all>
+				<xs:element ref="pressure" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="tangentialWind" minOccurs="0" maxOccurs="1"/>
+			</xs:all>
+			<xs:attribute name="units" use="required" type="lengthType"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="tangentialWind" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="speedType"/>
+					<xs:attribute name="precision" use="optional" type="anyNumber"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="comments" type="xs:string">
+		<xs:annotation>
+			<xs:documentation>Any comments can be inserted here</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="accuracy" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="xs:normalizedString"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="speedAccuracy" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="speedType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="directionAccuracy" nillable="true">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="anyNumber">
+					<xs:attribute name="units" use="required" type="angleType"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:simpleType name="dataType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="analysis"/>
+			<xs:enumeration value="forecast"/>
+			<xs:enumeration value="ensembleForecast"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="perturbType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="control"/>
+			<xs:enumeration value="positive"/>
+			<xs:enumeration value="negative"/>
+			<xs:enumeration value="simplex"/>
+			<xs:enumeration value="other"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="IDtype">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9]{10}_[0-9]?[0-9]{2}[NS]_[0-9]?[0-9]?[0-9]{2}[EW]"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="TnumberType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="(T|ST|XT)?[0-8].[0-9]"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="sectorType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="AAA"/>
+			<xs:enumeration value="full circle"/>
+			<xs:enumeration value="NNS"/>
+			<xs:enumeration value="north semicircle"/>
+			<xs:enumeration value="NES"/>
+			<xs:enumeration value="northeast semicircle"/>
+			<xs:enumeration value="EES"/>
+			<xs:enumeration value="east semicircle"/>
+			<xs:enumeration value="SES"/>
+			<xs:enumeration value="southeast semicircle"/>
+			<xs:enumeration value="SSS"/>
+			<xs:enumeration value="south semicircle"/>
+			<xs:enumeration value="SWS"/>
+			<xs:enumeration value="southwest semicircle"/>
+			<xs:enumeration value="WWS"/>
+			<xs:enumeration value="west semicircle"/>
+			<xs:enumeration value="NWS"/>
+			<xs:enumeration value="northwest semicircle"/>
+			<xs:enumeration value="NNQ"/>
+			<xs:enumeration value="north quadrant"/>
+			<xs:enumeration value="NEQ"/>
+			<xs:enumeration value="northeast quadrant"/>
+			<xs:enumeration value="EEQ"/>
+			<xs:enumeration value="east quadrant"/>
+			<xs:enumeration value="SEQ"/>
+			<xs:enumeration value="southeast quadrant"/>
+			<xs:enumeration value="SSQ"/>
+			<xs:enumeration value="south quadrant"/>
+			<xs:enumeration value="SWQ"/>
+			<xs:enumeration value="southwest quadrant"/>
+			<xs:enumeration value="WWQ"/>
+			<xs:enumeration value="west quadrant"/>
+			<xs:enumeration value="NWQ"/>
+			<xs:enumeration value="northwest quadrant"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="sourceType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="satellite"/>
+			<xs:enumeration value="aircraft"/>
+			<xs:enumeration value="dropsonde"/>
+			<xs:enumeration value="radar"/>
+			<xs:enumeration value="synoptic"/>
+			<xs:enumeration value="Dvorak"/>
+			<xs:enumeration value="outer closed isobar"/>
+			<xs:enumeration value="poorly defined eye"/>
+			<xs:enumeration value="over water observation"/>
+			<xs:enumeration value="over land observation"/>
+			<xs:enumeration value="model"/>
+			<xs:enumeration value="other"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="lengthType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="m"/>
+			<xs:enumeration value="km"/>
+			<xs:enumeration value="mi"/>
+			<xs:enumeration value="nm"/>
+			<xs:enumeration value="ft"/>
+			<xs:enumeration value="deg"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="timeType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="s"/>
+			<xs:enumeration value="m"/>
+			<xs:enumeration value="min"/>
+			<xs:enumeration value="h"/>
+			<xs:enumeration value="d"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="speedType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="m/s"/>
+			<xs:enumeration value="m s-1"/>
+			<xs:enumeration value="km/h"/>
+			<xs:enumeration value="km h-1"/>
+			<xs:enumeration value="mi/h"/>
+			<xs:enumeration value="mi h-1"/>
+			<xs:enumeration value="kt"/>
+			<xs:enumeration value="kn"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="posType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="deg"/>
+			<xs:enumeration value="deg N"/>
+			<xs:enumeration value="deg S"/>
+			<xs:enumeration value="deg W"/>
+			<xs:enumeration value="deg E"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="pressureType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Pa"/>
+			<xs:enumeration value="hPa"/>
+			<xs:enumeration value="mb"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="angleType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="deg true"/>
+			<xs:enumeration value="grad"/>
+			<xs:enumeration value="deg"/>
+			<xs:enumeration value="rad"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="precipType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="mm/h"/>
+			<xs:enumeration value="mm h-1"/>
+			<xs:enumeration value="mm/d"/>
+			<xs:enumeration value="mm d-1"/>
+			<xs:enumeration value="m/h"/>
+			<xs:enumeration value="m h-1"/>
+			<xs:enumeration value="m/d"/>
+			<xs:enumeration value="m d-1"/>
+			<xs:enumeration value="in/h"/>
+			<xs:enumeration value="in h-1"/>
+			<xs:enumeration value="in/d"/>
+			<xs:enumeration value="in d-1"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="tempType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="K"/>
+			<xs:enumeration value="C"/>
+			<xs:enumeration value="F"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="noTrail0">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9]*\."/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="anyNumber">
+		<xs:union memberTypes="xs:integer xs:decimal noTrail0"/>
+	</xs:simpleType>
+</xs:schema>
