@@ -5,7 +5,7 @@ related analysis and forecast information. Currently the Australian Bureau of
 Meteorology is responsible for maintenance and improvements to CXML. 
 
 This package is a python interface to the data model, to validate, read, and
-write CXML data.
+write CXML data. Currently based on CXML version 1.3.
 
 For more information:
 

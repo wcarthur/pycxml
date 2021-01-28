@@ -5,6 +5,102 @@ from datetime import datetime, timedelta
 import pycxml
 import xml.etree.ElementTree as ET
 
+"""
+With most of these tests, we do *not* test malformed XML elements, as they
+should be captured by the validation steps.
+"""
+
+
+class TestGetWindData(unittest.TestCase):
+
+    def setUp(self):
+        self.testVals = [100, 100, 50]
+        self.testUnits = ['kt', 'km/h', 'm/s']
+        self.testwindelems = [ET.fromstring(f"""<?xml version="1.0"?>
+            <fix>
+                <cycloneData>
+                    <maximumWind>
+                        <speed precision="0.01" units="{u}">{v}</speed>
+                    </maximumWind>
+                </cycloneData>
+            </fix>""") for u, v in zip(self.testUnits, self.testVals)]
+        self.results = [185.2, 100, 180]
+
+        self.missingElem = ET.fromstring("""<?xml version="1.0"?>
+            <fix>
+                <cycloneData>
+                    <minimumPressure>
+                        <pressure precision="0.01" units="{u}">{v}</pressure>
+                    </minimumPressure>
+                </cycloneData>
+            </fix>""")
+
+    def testValidWind(self):
+        for inelem, out in zip(self.testwindelems, self.results):
+            self.assertAlmostEqual(pycxml.getWindSpeed(inelem), out)
+
+    def testMissingElem(self):
+        self.assertIsNone(pycxml.getWindSpeed(self.missingElem))
+
+
+class TestGetMSLPData(unittest.TestCase):
+
+    def setUp(self):
+        self.testVals = [990, 1005, 99000]
+        self.testUnits = ['mb', 'hPa', 'Pa']
+        self.testmslpelems = [ET.fromstring(f"""<?xml version="1.0"?>
+            <fix>
+                <cycloneData>
+                    <minimumPressure>
+                        <pressure precision="0.01" units="{u}">{v}</pressure>
+                    </minimumPressure>
+                </cycloneData>
+            </fix>""") for u, v in zip(self.testUnits, self.testVals)]
+        self.results = [990, 1005, 990]
+        self.missingElem = ET.fromstring("""<?xml version="1.0"?>
+            <fix>
+                <cycloneData>
+                    <maximumWind>
+                        <speed precision="0.01" units="{u}">{v}</speed>
+                    </maximumWind>
+                </cycloneData>
+            </fix>""")
+
+    def testValidMslp(self):
+        for inelem, out in zip(self.testmslpelems, self.results):
+            self.assertAlmostEqual(pycxml.getMSLP(inelem), out)
+
+    def testMissingElem(self):
+        self.assertIsNone(pycxml.getMSLP(self.missingElem))
+
+
+class TestGetPoci(unittest.TestCase):
+
+    def setUp(self):
+        testVals = [1000, 1001, 1005, 100500]
+        testUnits = ['hPa', 'hPa', 'mb', 'Pa']
+
+        self.testxmlpocielems = [ET.fromstring(f"""<?xml version="1.0"?>
+            <fix>
+                <cycloneData>
+                    <lastClosedIsobar>
+                        <pressure units="{u}">{v}</pressure>"
+                    </lastClosedIsobar>
+                </cycloneData>
+            </fix>""") for v, u in zip(testVals, testUnits)]
+        self.results = [1000, 1001, 1005, 1005]
+
+        self.missingpocielem = ET.fromstring(f"""<?xml version="1.0"?>
+        <fix><cycloneData><maximumWind><rmw units="km">100</rmw>
+            </maximumWind></cycloneData></fix>""")
+
+    def testGetPOCI(self):
+        for inelem, out in zip(self.testxmlpocielems, self.results):
+            self.assertAlmostEqual(pycxml.getPoci(inelem), out)
+
+    def testMissingData(self):
+        self.assertIsNone(pycxml.getPoci(self.missingpocielem))
+
 
 class TestGetRadiusMaxWind(unittest.TestCase):
 
@@ -24,7 +120,7 @@ class TestGetRadiusMaxWind(unittest.TestCase):
         self.results = [15, 46.3, 40, 160.934]
 
         self.missingradelem = ET.fromstring(f"""<?xml version="1.0"?>
-        <fix><cycloneData><maximumWind><rmw units="km">100</rmw>
+        <fix><cycloneData><maximumWind><speed units="km/h">100</speed>
             </maximumWind></cycloneData></fix>""")
 
     def testGetRadiusMaxWind(self):
@@ -32,7 +128,7 @@ class TestGetRadiusMaxWind(unittest.TestCase):
             self.assertAlmostEqual(pycxml.getRmax(inelem), out)
 
     def testMissingData(self):
-        self.assertEqual(pycxml.getRmax(self.missingradelem), None)
+        self.assertIsNone(pycxml.getRmax(self.missingradelem))
 
 
 class TestGetHeadertime(unittest.TestCase):
@@ -81,6 +177,11 @@ class TestGetHeadertime(unittest.TestCase):
         self.assertRaises(ValueError, pycxml.getHeaderTime,
                           self.testxmlheadertimefmt, "creationTime")
 
+    def testMissingElem(self):
+        self.assertIsNone(
+            pycxml.getHeaderTime(self.testxmlheadertime, "createTime")
+        )
+
 
 class TestParsePosition(unittest.TestCase):
 
@@ -101,14 +202,12 @@ class TestParsePosition(unittest.TestCase):
     def test_parsePositionTranslateDegW(self):
         self.assertEqual(pycxml.parsePosition(
             self.testxmllonelems[0], self.testxmllatelems[0]),
-            (184.4, 15.5)
-        )
+            (184.4, 15.5))
 
     def test_parsePositionTranslateDegS(self):
         self.assertEqual(pycxml.parsePosition(
             self.testxmllonelems[1], self.testxmllatelems[1]),
-            (180, -20.5)
-            )
+            (180, -20.5))
 
     def test_parsePosition(self):
         self.assertEqual(pycxml.parsePosition(
@@ -125,10 +224,14 @@ class TestValidation(unittest.TestCase):
 
     def setUp(self):
         # The basic example CXML file from BoM is actually invalid!
-        self.xml_file = "CXML_example.xml"
+        self.xml_file = "./data/CXML_example.xml"
+        self.missing_file = "CXML_example.xml"
 
     def test_validate(self):
         self.assertFalse(pycxml.validate(self.xml_file))
+
+    def test_missingfile(self):
+        self.assertRaises(IOError, pycxml.validate, self.missing_file)
 
 
 class TestLoadfile(unittest.TestCase):

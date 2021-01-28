@@ -9,6 +9,7 @@ import sys
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import xml.etree.ElementTree as ET
 
 import logging as log
@@ -18,6 +19,8 @@ from converter import convert
 
 CXMLXSD = xmlschema.XMLSchema("cxml.1.3.xsd")
 DATEFMT = "%Y-%m-%dT%H:%M:%SZ"
+FORECAST_COLUMNS = ["disturbance", "hour", "datetime", "latitude",
+                    "longitude", "pcentre", "windspeed", "rmax", "poci"]
 
 
 def validate(xmlfile):
@@ -64,6 +67,67 @@ def parsePosition(lonelem, latelem):
     return (lonvalue, latvalue)
 
 
+def getMSLP(fix):
+    """
+    From a `fix` element, extract the minimum pressure and return the value,
+    converted to hPa.
+
+    :param fix: :class:`xml.etree.ElementTree.element` containing details of a
+    disturbance fix
+
+    :returns: Minimum pressure, in hPa, if it exists. None otherwise.
+    """
+    mslpelem = fix.find('./cycloneData/minimumPressure/pressure')
+    if mslpelem is not None:
+        mslp = float(mslpelem.text)
+        units = mslpelem.attrib['units']
+        return convert(mslp, units, 'hPa')
+    else:
+        log.warning("No minimum pressure data in this fix")
+        return None
+
+
+def getWindSpeed(fix):
+    """
+    From a `fix` element, extract the maximum wind speed and return the value,
+    converted to km/h
+
+    :param fix:  :class:`xml.etree.ElementTree.element` containing details of a
+    disturbance fix
+
+    :returns: maximum wind speed, in km/h, if it exists. None otherwise.
+    """
+    windelem = fix.find('./cycloneData/maximumWind/speed')
+    if windelem is not None:
+        wind = float(windelem.text)
+        units = windelem.attrib['units']
+        return convert(wind, units, 'kph')
+    else:
+        log.warning("No maximum wind speed data in this fix")
+        return None
+
+
+def getPoci(fix):
+    """
+    From a `fix` element, extract the pressure of the outermost closed isobar,
+    if it exists, and return the value, converted to hPa.
+
+    :param fix: :class:`xml.etree.ElementTree.element` containing details of a
+    disturbance fix
+
+    :returns: Pressure of outermost closed isobar, in hPa, if it exists. None
+    otherwise.
+    """
+    pocielem = fix.find('./cycloneData/lastClosedIsobar/pressure')
+    if pocielem is not None:
+        poci = float(pocielem.text)
+        units = pocielem.attrib['units']
+        return convert(poci, units, 'hPa')
+    else:
+        log.warning("No pressure of outer isobar data in this fix")
+        return None
+
+
 def getRmax(fix):
     """
     From a `fix` element, determine radius to maximum winds and return value
@@ -96,20 +160,23 @@ def parseFix(fix):
     :returns: :class:`dict`
     """
 
+    # This is strictly not a mandatory atttribute
     hour = int(fix.attrib['hour'])
+
     validTime = getHeaderTime(fix, 'validTime')
     lon, lat = parsePosition(fix.find('longitude'), fix.find('latitude'))
-    mslpelem = fix.find('./cycloneData/minimumPressure/pressure')
-    mslp = float(mslpelem.text)
-    mslpunits = mslpelem.attrib['units']
+    mslp = getMSLP(fix)
 
     windspeedelem = fix.find('./cycloneData/maximumWind/speed')
     wind = float(windspeedelem.text)
     windunits = windspeedelem.attrib['units']
     windavgper = fix.find('./cycloneData/maximumWind/averagingPeriod').text
     rmax = getRmax(fix)
+    poci = getPoci(fix)
 
-    print(f"+{hour:02d}: {validTime}, {lat}, {lon}, {mslp}, {wind}, {rmax}")
+    print(f"+{hour:02d}: {validTime}, {lat}, {lon}, {mslp}, {wind},\
+          {rmax}, {poci}")
+    return (hour, validTime, lat, lon, mslp, wind, rmax, poci)
 
 
 def getHeaderTime(header, field="baseTime"):
@@ -132,8 +199,8 @@ def getHeaderTime(header, field="baseTime"):
     try:
         dtstr = header.find(field).text
     except AttributeError:
-        log.warning(f"Header information does not contain {field}")
-        return
+        log.warning(f"Header information does not contain {field} element")
+        return None
 
     try:
         dt = datetime.strptime(dtstr, DATEFMT)
@@ -145,7 +212,10 @@ def getHeaderTime(header, field="baseTime"):
 
 def getHeaderCenter(header):
     """
-    Retrieve the production centre from the header information
+    Retrieve the production centre from the header information. The production
+    centre, if included, optionally includes a `subCenter` element. In the
+    Australian case, this is used to specify which TC Warning Centre issued the
+    bulletin (i.e. Perth, Brisbane, Darwin TCWC).
 
     :param header: :class:`xml.etree.ElementTree.Element` containing header
     information for the CXML file being processed.
@@ -206,7 +276,8 @@ def loadfile(xmlfile):
 
     :param str xmlfile: Path to the CXML file to load
 
-    :returns: xml.etree root
+    :returns: :class:`pandas.DataFrame` containing the data in all disturbances
+    included in the file.
 
     """
 
@@ -228,10 +299,14 @@ def loadfile(xmlfile):
     data = xroot.findall("./data[@type='forecast']/disturbance")
     log.debug(f"There are {len(data)} disturbances reported in this CXML file")
     for d in data:
+        df = pd.DataFrame(columns=FORECAST_COLUMNS)
         distId, tcId, tcName = parseDisturbance(d)
         log.info(f"Disturbance: {distId} - {tcName} - {tcId}")
         fixes = d.findall("./fix")
 
         log.debug(f"Disturbance {distId}: number of fixes: {len(fixes)}")
         for f in fixes:
-            parseFix(f)
+            hour, validime, lat, lon, mslp, wind, rmax, poci = parseFix(f)
+            df.loc[len(df), :] = [distId, hour, validime, lat, lon,
+                                  mslp, wind, rmax, poci]
+    return df
