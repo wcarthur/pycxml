@@ -14,10 +14,9 @@ import xml.etree.ElementTree as ET
 
 import logging as log
 
-import xmlschema
+from validator import Validator, CXML_SCHEMA
 from converter import convert
 
-CXMLXSD = xmlschema.XMLSchema("cxml.1.3.xsd")
 DATEFMT = "%Y-%m-%dT%H:%M:%SZ"
 FORECAST_COLUMNS = ["disturbance", "hour", "datetime", "latitude",
                     "longitude", "pcentre", "windspeed", "rmax", "poci"]
@@ -33,7 +32,9 @@ def validate(xmlfile):
               default CXML XSD definition
 
     """
-    return CXMLXSD.is_valid(xmlfile)
+    validator = Validator(CXML_SCHEMA)
+    validator.validate(xmlfile)
+    return
 
 
 def parsePosition(lonelem, latelem):

@@ -20,8 +20,6 @@ CXML XML Schema Definition: http://www.bom.gov.au/cyclone/cxmlinfo/cxml.1.3.xsd
 
 ## Dependencies
 
-* [xmlschema](https://xmlschema.readthedocs.io/en/latest/intro.html)
-
 ## Usage
 
 ## Examples of CXML data
