@@ -24,6 +24,31 @@ class TestConvert(NumpyTestCase.NumpyTestCase):
         self.assertEqual(convert(5, "mps", "kph"), 18.)
         self.assertEqual(convert(15, "mps", "kph"), 54.)
         self.assertEqual(convert(100, "mps", "kph"), 360.)
+        self.assertEqual(convert(0, "m/s", "kmh"), 0.)
+        self.assertEqual(convert(1, "m/s", "kmh"), 3.6)
+        self.assertEqual(convert(5, "m/s", "km/h"), 18.)
+        self.assertEqual(convert(15, "m s-1", "km/h"), 54.)
+        self.assertEqual(convert(100, "m s-1", "km/h"), 360.)
+
+    def test_kmh2mps(self):
+        """Convert from km/h to m/s"""
+        self.assertAlmostEqual(convert(3.6, "kph", "m/s"), 1.0, 3)
+        self.assertAlmostEqual(convert(36., "km/h", 'm/s'), 10., 3)
+        self.assertAlmostEqual(convert(36., "kmh", 'm/s'), 10., 3)
+        self.assertAlmostEqual(convert(36., "kmh", 'mps'), 10., 3)
+        self.assertAlmostEqual(convert(36., "kmh", 'm s-1'), 10., 3)
+
+    def test_knots2kmh(self):
+        """Convert from knots to km/h"""
+        self.assertAlmostEqual(convert(1, "kts", "km/h"), 1.852, 5)
+        self.assertAlmostEqual(convert(1, "kn", "km/h"), 1.852, 5)
+        self.assertAlmostEqual(convert(1, "kt", "km/h"), 1.852, 5)
+
+    def test_kmh2knots(self):
+        """Convert from kmh to knots"""
+        self.assertAlmostEqual(convert(1.852, "kmh", "kts"), 1., 5)
+        self.assertAlmostEqual(convert(18.52, "km/h", "kt"), 10., 5)
+        self.assertAlmostEqual(convert(18.52, "km/h", "kn"), 10., 5)
 
     def test_km2deg(self):
         """Convert distance in km to distance in degrees"""

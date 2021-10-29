@@ -68,41 +68,45 @@ def parsePosition(lonelem, latelem):
     return (lonvalue, latvalue)
 
 
-def getMSLP(fix):
+def getMSLP(fix, units='hPa'):
     """
     From a `fix` element, extract the minimum pressure and return the value,
-    converted to hPa.
+    converted to hPa. We make the assumption that the `units` attribute exists
+    in the file (it is a required attribute of the `pressure` element in the
+    XSD).
 
     :param fix: :class:`xml.etree.ElementTree.element` containing details of a
     disturbance fix
-
-    :returns: Minimum pressure, in hPa, if it exists. None otherwise.
+    :param str units: output units (default "hPa")
+    :returns: Minimum pressure, in specified units, if it exists. None
+    otherwise.
     """
     mslpelem = fix.find('./cycloneData/minimumPressure/pressure')
     if mslpelem is not None:
         mslp = float(mslpelem.text)
-        units = mslpelem.attrib['units']
-        return convert(mslp, units, 'hPa')
+        inunits = mslpelem.attrib['units']
+        return convert(mslp, inunits, units)
     else:
         log.warning("No minimum pressure data in this fix")
         return None
 
 
-def getWindSpeed(fix):
+def getWindSpeed(fix, units='km/h'):
     """
     From a `fix` element, extract the maximum wind speed and return the value,
-    converted to km/h
+    converted to the given units.
 
     :param fix:  :class:`xml.etree.ElementTree.element` containing details of a
     disturbance fix
+    :param str units: Units to convert maximum wind speed value to.
 
-    :returns: maximum wind speed, in km/h, if it exists. None otherwise.
+    :returns: maximum wind speed, in given units, if it exists. None otherwise.
     """
     windelem = fix.find('./cycloneData/maximumWind/speed')
     if windelem is not None:
         wind = float(windelem.text)
-        units = windelem.attrib['units']
-        return convert(wind, units, 'kph')
+        inunits = windelem.attrib['units']
+        return convert(wind, inunits, units)
     else:
         log.warning("No maximum wind speed data in this fix")
         return None
@@ -164,14 +168,14 @@ def parseFix(fix):
     # This is strictly not a mandatory atttribute
     hour = int(fix.attrib['hour'])
 
+    # These are the only two mandatory elements of a fix.
+    # Every other element is optional
     validTime = getHeaderTime(fix, 'validTime')
     lon, lat = parsePosition(fix.find('longitude'), fix.find('latitude'))
-    mslp = getMSLP(fix)
 
-    windspeedelem = fix.find('./cycloneData/maximumWind/speed')
-    wind = float(windspeedelem.text)
-    windunits = windspeedelem.attrib['units']
-    windavgper = fix.find('./cycloneData/maximumWind/averagingPeriod').text
+    # Other elements, may not be present:
+    mslp = getMSLP(fix)
+    wind = getWindSpeed(fix)
     rmax = getRmax(fix)
     poci = getPoci(fix)
 

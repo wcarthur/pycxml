@@ -32,6 +32,19 @@ def convert(value, inunits, outunits):
     if inunits == 'kn':
         inunits = 'kts'
 
+    if outunits == 'kmh':
+        outunits = 'kph'
+    if outunits == 'km/h':
+        outunits = 'kph'
+    if outunits == "m/s":
+        outunits = "mps"
+    if outunits == "m s-1":
+        outunits = "mps"
+    if outunits == 'kt':
+        outunits = 'kts'
+    if outunits == 'kn':
+        outunits = 'kts'
+
     # Speeds:
     mps = {"kph": 3.6, "kts": 1.944, "mph": 2.2369}
     mph = {"kph": 1.60934, "kts": 0.86898, "mps": 0.44704}
