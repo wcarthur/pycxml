@@ -3,12 +3,57 @@ import os
 import unittest
 from datetime import datetime, timedelta
 import pycxml
+import pandas as pd
+from pandas.testing import assert_series_equal
 import xml.etree.ElementTree as ET
 
 """
 With most of these tests, we do *not* test malformed XML elements, as they
 should be captured by the validation steps.
 """
+
+
+class TestIsEnsemble(unittest.TestCase):
+
+    def setUp(self):
+        self.ensembleMember = ET.fromstring("""<?xml version="1.0"?>
+            <header>
+                <generatingApplication>
+                    <ensemble>
+                        <numMembers>1000</numMembers>
+                        <perturbationMethod>DeMaria Method</perturbationMethod>
+                    </ensemble>
+                </generatingApplication>
+                <baseTime>2007-07-25T12:00:00Z</baseTime>
+                <creationTime>2007-07-25T15:42:00</creationTime>
+            </header>""")
+
+        self.ensembleElem = ET.fromstring("""<?xml version="1.0"?>
+            <ensemble>
+                <numMembers>1000</numMembers>
+                <perturbationMethod>DeMaria Method</perturbationMethod>
+            </ensemble>""")
+
+        self.nonEnsemble = ET.fromstring("""
+            <header>
+                <product>Cyclone Analysis</product>
+                <generatingApplication>
+                    <applicationType>Radar hurricane analysis</applicationType>
+                </generatingApplication>
+                <productionCenter>
+                    NWS
+                    <subCenter>National Hurricane Center</subCenter>
+                </productionCenter>
+                <baseTime>2007-07-25T12:00:00Z</baseTime>
+                <creationTime>2007-07-25T15:42:00</creationTime>
+            </header>""")
+
+    def testIsEnsemble(self):
+        self.assertTrue(pycxml.isEnsemble(self.ensembleMember))
+        self.assertFalse(pycxml.isEnsemble(self.nonEnsemble))
+
+    def testGetEnsembleMemberCount(self):
+        self.assertEqual(pycxml.ensembleCount(self.ensembleElem), 1000)
 
 
 class TestGetWindData(unittest.TestCase):
@@ -129,6 +174,46 @@ class TestGetRadiusMaxWind(unittest.TestCase):
 
     def testMissingData(self):
         self.assertIsNone(pycxml.getRmax(self.missingradelem))
+
+
+class TestWindContours(unittest.TestCase):
+
+    def setUp(self):
+        self.testxmlwindcontour = ET.fromstring(
+            f"""<?xml version="1.0"?>
+            <fix>
+            <cycloneData>
+            <windContours>
+                <windSpeed units="kt">
+                    34.0
+                    <radius units="nm" sector="NEQ">70.0</radius>
+                    <radius units="nm" sector="SEQ">70.0</radius>
+                    <radius units="nm" sector="SWQ">60.0</radius>
+                    <radius units="nm" sector="NWQ">50.0</radius>
+                </windSpeed>
+                <windSpeed units="kt">
+                    48.0
+                    <radius units="nm" sector="NEQ">20.0</radius>
+                    <radius units="nm" sector="SEQ">20.0</radius>
+                </windSpeed>
+            </windContours>
+            </cycloneData>
+            </fix>""")
+        windradii = {
+            'R34NEQ': 70.,
+            'R34SEQ': 70.,
+            'R34SWQ': 60.,
+            'R34NWQ': 50.,
+            'R48NEQ': 20.,
+            'R48SEQ': 20,
+        }
+        self.windradii = pd.Series(windradii,
+                                   index=pycxml.RADII_COLUMNS)
+
+    def testwindcontours(self):
+        assert_series_equal(
+            pycxml.getWindContours(self.testxmlwindcontour),
+            self.windradii)
 
 
 class TestGetHeadertime(unittest.TestCase):

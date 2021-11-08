@@ -8,7 +8,7 @@ class TestValidation(unittest.TestCase):
 
     def setUp(self):
         # The basic example CXML file from BoM is actually invalid!
-        self.xml_file = "./data/CXML_example.xml"
+        self.xml_file = "./tests/test_data/CXML_example.xml"
         self.missing_file = "CXML_example.xml"
 
     def test_validate(self):

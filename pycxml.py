@@ -6,6 +6,7 @@ pycxml - A python translator for Cyclone XML (cxml)
 
 import os
 import sys
+from itertools import product
 from datetime import datetime
 
 import numpy as np
@@ -17,9 +18,16 @@ import logging as log
 from validator import Validator, CXML_SCHEMA
 from converter import convert
 
+
 DATEFMT = "%Y-%m-%dT%H:%M:%SZ"
-FORECAST_COLUMNS = ["disturbance", "hour", "datetime", "latitude",
+FORECAST_COLUMNS = ["disturbance", "validtime", "latitude",
                     "longitude", "pcentre", "windspeed", "rmax", "poci"]
+ENSEMBLE_COLUMNS = ["disturbance", "member", "validtime", "latitude",
+                    "longitude", "pcentre", "windspeed", "rmax", "poci"]
+
+RADII_COLUMNS = ['R34NEQ', 'R34SEQ', 'R34SWQ', 'R34NWQ',
+                 'R48NEQ', 'R48SEQ', 'R48SWQ', 'R48NWQ',
+                 'R64NEQ', 'R64SEQ', 'R64SWQ', 'R64NWQ']
 
 
 def validate(xmlfile):
@@ -58,11 +66,11 @@ def parsePosition(lonelem, latelem):
 
     latvalue = float(latelem.text)
     latunits = latelem.attrib['units']
-    latvalue = latvalue if latunits == 'deg N' else -latvalue
+    latvalue = -latvalue if latunits == 'deg S' else latvalue
 
     lonvalue = float(lonelem.text)
     lonunits = lonelem.attrib['units']
-    lonvalue = lonvalue if lonunits == 'deg E' else -lonvalue
+    lonvalue = -lonvalue if lonunits == 'deg W' else lonvalue
     lonvalue = np.mod(lonvalue, 360)
 
     return (lonvalue, latvalue)
@@ -87,7 +95,7 @@ def getMSLP(fix, units='hPa'):
         inunits = mslpelem.attrib['units']
         return convert(mslp, inunits, units)
     else:
-        log.warning("No minimum pressure data in this fix")
+        # log.warning("No minimum pressure data in this fix")
         return None
 
 
@@ -129,7 +137,7 @@ def getPoci(fix):
         units = pocielem.attrib['units']
         return convert(poci, units, 'hPa')
     else:
-        log.warning("No pressure of outer isobar data in this fix")
+        # log.warning("No pressure of outer isobar data in this fix")
         return None
 
 
@@ -166,22 +174,42 @@ def parseFix(fix):
     """
 
     # This is strictly not a mandatory atttribute
-    hour = int(fix.attrib['hour'])
+    # hour = int(fix.attrib['hour'])
 
     # These are the only two mandatory elements of a fix.
     # Every other element is optional
-    validTime = getHeaderTime(fix, 'validTime')
-    lon, lat = parsePosition(fix.find('longitude'), fix.find('latitude'))
+    fixdata = {}
+    fixdata['validtime'] = getHeaderTime(fix, 'validTime')
+    fixdata['longitude'], fixdata['latitude'] = parsePosition(
+        fix.find('longitude'), fix.find('latitude'))
 
     # Other elements, may not be present:
-    mslp = getMSLP(fix)
-    wind = getWindSpeed(fix)
-    rmax = getRmax(fix)
-    poci = getPoci(fix)
+    fixdata['pcentre'] = getMSLP(fix)
+    fixdata['windspeed'] = getWindSpeed(fix)
+    fixdata['rmax'] = getRmax(fix)
+    fixdata['poci'] = getPoci(fix)
+    series = pd.Series(fixdata, index=FORECAST_COLUMNS)
+    if fix.find('./cycloneData/windContours'):
+        windradii = getWindContours(fix)
+        fixdata = pd.concat([series, windradii])
+        series = pd.Series(fixdata, index=FORECAST_COLUMNS+RADII_COLUMNS)
 
-    print(f"+{hour:02d}: {validTime}, {lat}, {lon}, {mslp}, {wind},\
-          {rmax}, {poci}")
-    return (hour, validTime, lat, lon, mslp, wind, rmax, poci)
+    return series
+
+
+def getWindContours(fix):
+    """
+    :param fix: :class:`xml.etree.ElementTree.element` containing
+    details of the wind contours element of a disturbance fix.
+    """
+    data = {}
+    for elem in fix.findall('cycloneData/windContours/windSpeed'):
+        mag = int(float(elem.text))
+        for r in elem.findall('radius'):
+            quadrant = r.attrib['sector']
+            distance = float(r.text)
+            data[f"R{mag:d}{quadrant}"] = distance
+    return pd.Series(data, index=RADII_COLUMNS)
 
 
 def getHeaderTime(header, field="baseTime"):
@@ -248,6 +276,84 @@ def parseHeader(header):
     return basetime, creationtime, centre
 
 
+def isEnsemble(header):
+    """
+    Determine if a file represents an ensemble forecast product.
+    These have an <ensemble> element in the header, which contains
+    information on the number of members and the perturbation method.
+
+    :param header: :class:`xml.etree.ElementTree.Element` containing header
+    information for the CXML file being processed.
+
+    :returns: `True` if this represents an ensemble forecast, False otherwise.
+    """
+    if header.find('generatingApplication/ensemble') is not None:
+        return True
+    else:
+        return False
+
+
+def ensembleCount(ensembleElem):
+    """
+    Get the number of ensemble members from the header
+    :param header: :class:`xml.etree.ElementTree.Element` containing header
+    information for the CXML file being processed.
+
+    :returns: Number of ensemble members
+    """
+
+    nmembers = ensembleElem.find('numMembers')
+    return int(nmembers.text)
+
+
+def parseEnsemble(data: list) -> list:
+    """
+
+    :param list data: List of data elements
+    :returns: a list of `pd.DataFrames` that each contain an ensemble member
+    """
+    forecasts = []
+    for d in data:
+        log.debug(f"Ensemble member: {d.attrib['member']}")
+        member = d.attrib['member']
+        disturbance = d.find('disturbance')
+        distId, tcId, tcName = parseDisturbance(disturbance)
+        df = pd.DataFrame(columns=ENSEMBLE_COLUMNS+RADII_COLUMNS)
+        fixes = disturbance.findall("./fix")
+        log.debug(f"Disturbance {distId}: number of fixes: {len(fixes)}")
+        for f in fixes:
+            fixdata = parseFix(f)
+            df.loc[len(df), :] = fixdata
+        forecasts.append(df)
+    return forecasts
+
+
+def parseForecast(data) -> pd.DataFrame:
+    """
+    Parse a data element to extract forecast information into a DataFrame.
+
+    :param data: :class:`xml.etree.ElementTree.Element` containing forecas
+    data.
+
+    :returns: `pd.DataFrame` of the forecast data.
+    """
+    disturbance = data.find('disturbance')
+    distId, tcId, tcName = parseDisturbance(disturbance)
+    df = pd.DataFrame(columns=FORECAST_COLUMNS+RADII_COLUMNS)
+    fixes = disturbance.findall("./fix")
+    log.debug(f"Disturbance {distId}: number of fixes: {len(fixes)}")
+
+    for f in fixes:
+        fixdata = parseFix(f)
+        df.loc[len(df), :] = fixdata
+    df['disturbance'] = disturbance
+    return df
+
+
+def parseAnalysis(data):
+    pass
+
+
 def parseDisturbance(dist):
     """
     Process a disturbance feature (i.e. a TC event)
@@ -292,26 +398,29 @@ def loadfile(xmlfile):
 
     log.info(f"Parsing {xmlfile}")
 
-    if validate(xmlfile):
-        log.info(f"{xmlfile} is a valid CXML file")
-    else:
-        log.error(f"{xmlfile} is not a valid CXML file")
-        log.error("Check the file contents")
-        return None
+    # try:
+    #     validate(xmlfile)
+    # except AssertionError as e:
+    #    log.error(f"{xmlfile} is not a valid CXML file: {e}")
+    #     raise
 
     tree = ET.parse(xmlfile)
     xroot = tree.getroot()
-    data = xroot.findall("./data[@type='forecast']/disturbance")
-    log.debug(f"There are {len(data)} disturbances reported in this CXML file")
-    for d in data:
-        df = pd.DataFrame(columns=FORECAST_COLUMNS)
-        distId, tcId, tcName = parseDisturbance(d)
-        log.info(f"Disturbance: {distId} - {tcName} - {tcId}")
-        fixes = d.findall("./fix")
+    header = xroot.find('header')
 
-        log.debug(f"Disturbance {distId}: number of fixes: {len(fixes)}")
-        for f in fixes:
-            hour, validime, lat, lon, mslp, wind, rmax, poci = parseFix(f)
-            df.loc[len(df), :] = [distId, hour, validime, lat, lon,
-                                  mslp, wind, rmax, poci]
-    return df
+    if isEnsemble(header):
+        ensembleElem = header.find('generatingApplication/ensemble')
+        nmembers = ensembleCount(ensembleElem)
+        log.info(f"This is an ensemble forecast with {nmembers} members")
+        data = xroot.findall("./data")
+        forecasts = parseEnsemble(data)
+        return forecasts
+    else:
+        data = xroot.findall("./data")
+        for d in data:
+            if d.attrib['type'] == 'forecast':
+                forecast = parseForecast(d)
+                return forecast
+            elif d.attrib['type'] == 'analysis':
+                analysis = parseAnalysis(d)
+                return analysis
