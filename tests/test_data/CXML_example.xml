@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cxml xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:noNamespaceSchemaLocation="http://www.bom.gov.au/bmrc/projects/THORPEX/CXML/cxml.0.2.xsd">
+	<header>
+		<product>Cyclone Forecast</product>
+		<generatingApplication>
+			<applicationType>Global ensemble prediction system</applicationType>
+			<model>
+				<name>ECMWF</name>
+				<domain>global</domain>
+				<modelResolution>T399</modelResolution>
+				<dataResolution units="deg">0.5</dataResolution>
+				<productionStatus>prod</productionStatus>
+			</model>
+			<ensemble>
+				<numMembers>51</numMembers>
+				<perturbationMethod>SVD</perturbationMethod>
+			</ensemble>
+		</generatingApplication>
+		<productionCenter>ECMWF
+			<subCenter>Operations Division</subCenter>
+		</productionCenter>
+		<moreInfo>http://www.ecmwf.int/about/eps.html</moreInfo>
+		<moreMetadata>http://www.ecmwf.int/about/eps_metadata.html</moreMetadata>
+		<baseTime>2007-07-25T12:00:00Z</baseTime>
+		<creationTime>2007-07-25T15:42:00</creationTime>
+		<spatialReferenceSystem>
+			<name>esriSRSpheroid_WGS1984</name>
+			<radius units="km">6378.137</radius>
+		</spatialReferenceSystem>
+	</header>
+
+	<data type="analysis">
+		<disturbance ID="2007072518_134N_1102E">
+			<cycloneName>George</cycloneName>
+			<basin>Southeast Indian</basin>
+			<fix hour="0">
+				<validTime>2007-07-25T12:00:00Z</validTime>
+				<latitude units="deg N">13.2</latitude>
+				<longitude units="deg E">110.0</longitude>
+				<accuracy units="deg">0.3</accuracy>
+				<cycloneData biasCorrected="false">
+					<development>tropical cyclone</development>
+					<category>2</category>
+					<Dvorak>
+						<dataTnumber>3.5</dataTnumber>
+						<modelExpectedTnumber>3.5</modelExpectedTnumber>
+						<patternTnumber>3.0</patternTnumber>
+						<finalTnumber>3.0</finalTnumber>
+						<ongoingChange>MINUS</ongoingChange>
+						<currentIntensity>3.0</currentIntensity>
+						<pastChange>D1.0</pastChange>
+						<changePeriod units="h">24</changePeriod>
+					</Dvorak>
+					<eye source="satellite">
+						<shape>circular</shape>
+						<diameter units="km">35.</diameter>
+					</eye>
+					<minimumPressure source="aircraft">
+						<pressure units="hPa" precision="1.">989.</pressure>
+						<accuracy units="hPa">0.5</accuracy>
+					</minimumPressure>
+					<maximumWind source="aircraft">
+						<speed units="m/s" precision="0.2">49.8</speed>
+						<averagingPeriod units="min">10.</averagingPeriod>
+						<latitude units="deg N">13.24</latitude>
+						<longitude units="deg E">110.13</longitude>
+						<radius units="km">25.2</radius>
+						<gusts units="m/s">115.</gusts>
+						<gustAvgPeriod units="s">3.</gustAvgPeriod>
+						<accuracy units="m/s">2.</accuracy>
+					</maximumWind>
+				</cycloneData>
+			</fix>
+		</disturbance>
+	</data>
+
+	<data type="ensembleForecast" member="0" perturb="control" origin="ECMWF">
+		<disturbance ID="2007072518_134N_1102E">
+			<cycloneName>George</cycloneName>
+			<cycloneNumber>1</cycloneNumber>
+			<localID>EPS0001</localID>
+			<basin>Southeast Indian</basin>
+			<objectiveTechnique>BLND</objectiveTechnique>
+			<fix hour="6">
+				<validTime>2007-07-25T18:00:00Z</validTime>
+				<latitude units="deg N">13.4</latitude>
+				<longitude units="deg E">110.2</longitude>
+				<subRegion>South Indian Ocean</subRegion>
+				<cycloneData biasCorrected="true">
+					<development>tropical cyclone</development>
+					<systemDepth>medium</systemDepth>
+					<stormMotion>
+						<directionToward units="deg true">210.</directionToward>
+						<speed units="m/s">50.</speed>
+					</stormMotion>
+					<cyclonePhase>
+						<stormRelThkSymmetry units="m">30.</stormRelThkSymmetry>
+						<thermalWindLower units="m/s">50.</thermalWindLower>
+						<thermalWindUpper units="m/s">-250.</thermalWindUpper>
+					</cyclonePhase>
+					<minimumPressure>
+						<pressure units="hPa">989.8</pressure>
+					</minimumPressure>
+					<lastClosedIsobar>
+						<pressure units="hPa">1002.3</pressure>
+						<radius units="km">600.</radius>
+					</lastClosedIsobar>
+					<maximumWind>
+						<speed units="m/s">49.8</speed>
+						<latitude units="deg N">13.24</latitude>
+						<longitude units="deg E">110.13</longitude>
+						<radius units="km">25.2</radius>
+					</maximumWind>
+					<windContours>
+						<windSpeed units="kt">34
+							<radius sector="AAA" units="km">235.</radius>
+							<radius sector="NEQ" units="km">200.</radius>
+							<radius sector="SEQ" units="km">243.</radius>
+							<radius sector="SWQ" units="km">301.</radius>
+							<radius sector="NWQ" units="km">228.</radius>
+						</windSpeed>
+						<windSpeed units="kt">50
+							<radius sector="NEQ" units="km">159.</radius>
+							<radius sector="SEQ" units="km">138.</radius>
+							<radius sector="SWQ" units="km">121.</radius>
+							<radius sector="NWQ" units="km">107.</radius>
+						</windSpeed>
+						<windSpeed units="kt">63
+							<radius sector="AAA" units="km">64.</radius>
+						</windSpeed>
+					</windContours>
+					<maximumPrecipitation>
+						<intensity units="mm/h">68.</intensity>
+						<latitude units="deg N">13.05</latitude>
+						<longitude units="deg E">110.25</longitude>
+						<precipitationType>rain</precipitationType>
+					</maximumPrecipitation>
+					<maximumWaveHeight>
+						<height units="ft">68.</height>
+						<latitude units="deg N">13.05</latitude>
+						<longitude units="deg E">110.25</longitude>
+					</maximumWaveHeight>
+					<seaContours>
+						<waveHeight units="m">10
+							<radius sector="AAA" units="km">200.</radius>
+						</waveHeight>
+						<waveHeight units="m">20
+							<radius sector="AAA" units="km">120.</radius>
+						</waveHeight>
+					</seaContours>
+					<fixedRadii>
+						<fixedRadius units="km">500.
+							<pressure units="hPa">995.3</pressure>
+							<tangentialWind units="m/s">50.</tangentialWind>
+						</fixedRadius>
+						<fixedRadius units="km">1000.
+							<pressure units="hPa">1006.</pressure>
+							<tangentialWind units="m/s">27.3</tangentialWind>
+						</fixedRadius>
+					</fixedRadii>
+				</cycloneData>
+			</fix>
+		</disturbance>
+	</data>
+</cxml>
