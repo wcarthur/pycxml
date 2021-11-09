@@ -5,7 +5,7 @@ related analysis and forecast information. Currently the Australian Bureau of
 Meteorology is responsible for maintenance and improvements to CXML. 
 
 This package is a python interface to the data model, to validate, read, and
-write CXML data.
+write CXML data. Currently based on CXML version 1.3.
 
 For more information:
 
@@ -20,9 +20,22 @@ CXML XML Schema Definition: http://www.bom.gov.au/cyclone/cxmlinfo/cxml.1.3.xsd
 
 ## Dependencies
 
-* [xmlschema](https://xmlschema.readthedocs.io/en/latest/intro.html)
-
 ## Usage
+
+CXML supports three data types: `forecast`, `ensembleForecast` and `analysis`.
+
+Ensemble forecasts (`ensembleForecast`) are an extension of the `forecast`
+datatype, in that there are multiple members for each forecast.
+
+### Reading a CXML file
+
+To read a CXML file, use the `pycxml.loadfile` function. Data are returned as a
+`pandas.DataFrame`
+
+>>> import pycxml
+>>> pycxml.loadfile('./test_data/CXML_example.xml')
+
+
 
 ## Examples of CXML data
 
@@ -35,4 +48,4 @@ The Cyclone XML site contains some basic examples of CXML data. Additional
 Author: Craig Arthur
 Email: craig.arthur@ga.gov.au
 
-Last updated: 2021-01-20
+Last updated: 2021-11-09
