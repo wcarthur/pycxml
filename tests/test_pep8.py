@@ -5,7 +5,7 @@ Perform a PEP8 conformance test of the nc-time-axis code base.
 import os
 import unittest
 
-import pep8
+import pycodestyle
 
 import pycxml
 
@@ -20,7 +20,7 @@ class TestCodeFormat(unittest.TestCase):
         # The file should be a line separated list of filenames/directories
         # as can be passed to the "pep8" tool's exclude list.
 
-        pep8style = pep8.StyleGuide(quiet=False)
+        pep8style = pycodestyle.StyleGuide(quiet=False)
         pep8style.options.exclude.extend(['*/_version.py'])
 
         # Allow users to add their own exclude list.
