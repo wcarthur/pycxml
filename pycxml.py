@@ -324,6 +324,9 @@ def parseEnsemble(data: list) -> list:
         for f in fixes:
             fixdata = parseFix(f)
             df.loc[len(df), :] = fixdata
+        df["disturbance"] = distId
+        df['member'] = member
+
         forecasts.append(df)
     return forecasts
 
@@ -346,7 +349,7 @@ def parseForecast(data) -> pd.DataFrame:
     for f in fixes:
         fixdata = parseFix(f)
         df.loc[len(df), :] = fixdata
-    df['disturbance'] = disturbance
+    df['disturbance'] = distId
     return df
 
 
