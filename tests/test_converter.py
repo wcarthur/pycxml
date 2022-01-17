@@ -1,9 +1,7 @@
-import os
-import sys
 import unittest
 from numpy import array, arange, pi
 import NumpyTestCase
-from converter import convert
+from pycxml.converter import convert
 
 
 class TestConvert(NumpyTestCase.NumpyTestCase):
