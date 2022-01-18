@@ -9,5 +9,5 @@ setup(
     author='Geoscience Australia',
     author_email='',
     description='',
-    install_requires=['numpy', 'pandas', 'pycodestyle', 'lxml']
+    install_requires=['numpy', 'pandas', 'pycodestyle', 'lxml', 'vincenty']
 )

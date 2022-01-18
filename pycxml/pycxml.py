@@ -5,8 +5,7 @@ pycxml - A python translator for Cyclone XML (cxml)
 """
 
 import os
-import sys
-from itertools import product
+from vincenty import vincenty
 from datetime import datetime
 
 import numpy as np
@@ -99,6 +98,58 @@ def getMSLP(fix, units='hPa'):
         return None
 
 
+def estimate_pcentre(df: pd.DataFrame) -> np.array:
+    """
+    Estimate the minimum central  pressure of the a cyclone from its other values. This uses the approach
+    of Courtney and Knaff (2009).
+
+    :param df: dataframe that at a minimum should contain:
+        - maximum windspeed in kph
+        - latitude in degrees
+        - translation speed in knots
+        - pressure of last closed isobar in hPa
+
+    """
+
+    vmax = convert(df.windspeed.values.astype(float), 'kph', 'kts')
+
+    # Rankine vortex parameter
+    x = 0.1147 + 0.0055 * vmax - 0.001 * (df.latitude.values.astype(float) - 25.0)
+
+    # climatological value of v500
+    rmax_c = 66.785 - 0.09102 * vmax + 1.0619 * (df.latitude.values.astype(float) - 25.0)
+    v500c = vmax * (rmax_c / 500) ** x
+
+    # estimated value of v500
+    v500 = vmax * (df.rmax.values.astype(float) / 500) ** x
+    s = v500 / v500c
+
+    # adjust windspeed for forward motion of storm
+    vsrm = vmax - 1.5 * df.translation_speed.values.astype(float) ** 0.63
+
+    # estimate the central pressure
+    pc = 23.286 - 0.483 * vsrm - (vsrm / 24.254) ** 2 - 12.587 * s - 0.483 * df.latitude.values.astype(float)
+    pc += df.poci.values.astype(float)
+
+    return pc
+
+
+def translation_speed(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Update the data frame to include storm translation speed
+
+    :param df: `pd.DataFrame` containing track details (latitude, longitude, timestamp, etc.)
+    """
+    coords = df[['longitude', 'latitude']].values
+    dists = [vincenty(coords[i], coords[i + 1]) for i in range(len(coords) - 1)]
+    dt = df.validtime.diff().dt.seconds.values/3600
+    #dt = np.diff(df.validtime) / (3600 * np.timedelta64(1, 's'))
+    speed = np.zeros(len(df))
+    speed[1:] = np.array(dists) / dt[1:]
+    df['translation_speed'] = speed * 0.54
+    return df
+
+
 def getWindSpeed(fix, units='km/h'):
     """
     From a `fix` element, extract the maximum wind speed and return the value,
@@ -138,7 +189,7 @@ def getPoci(fix):
         return convert(poci, units, 'hPa')
     else:
         # log.warning("No pressure of outer isobar data in this fix")
-        return None
+        return 1013.25
 
 
 def getRmax(fix):
@@ -327,7 +378,10 @@ def parseEnsemble(data: list) -> list:
         df["disturbance"] = distId
         df['member'] = member
 
+        df = translation_speed(df)
+        df.pcentre.values[pd.isnull(df.pcentre)] = estimate_pcentre(df[pd.isnull(df.pcentre)])
         forecasts.append(df)
+
     return forecasts
 
 
