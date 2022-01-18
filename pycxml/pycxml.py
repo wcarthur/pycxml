@@ -24,7 +24,7 @@ FORECAST_COLUMNS = ["disturbance", "validtime", "latitude",
 ENSEMBLE_COLUMNS = ["disturbance", "member", "validtime", "latitude",
                     "longitude", "pcentre", "windspeed", "rmax", "poci"]
 
-RADII_COLUMNS = ['R34NEQ', 'R34SEQ', 'R34SWQ', 'R34NWQ',
+RADII_COLUMNS = ['R34avg', 'R34NEQ', 'R34SEQ', 'R34SWQ', 'R34NWQ',
                  'R48NEQ', 'R48SEQ', 'R48SWQ', 'R48NWQ',
                  'R64NEQ', 'R64SEQ', 'R64SWQ', 'R64NWQ']
 
@@ -98,7 +98,7 @@ def getMSLP(fix, units='hPa'):
         return None
 
 
-def estimate_pcentre(df: pd.DataFrame) -> np.array:
+def estimate_mslp(df: pd.DataFrame) -> np.array:
     """
     Estimate the minimum central  pressure of the a cyclone from its other values. This uses the approach
     of Courtney and Knaff (2009).
@@ -108,29 +108,33 @@ def estimate_pcentre(df: pd.DataFrame) -> np.array:
         - latitude in degrees
         - translation speed in knots
         - pressure of last closed isobar in hPa
+        - r34 in nautical miles
 
     """
 
-    vmax = convert(df.windspeed.values.astype(float), 'kph', 'kts')
-
+    # convert units form kmh to kts
+    # and convert 10-minute mean to 1-minute mean
+    vmax = convert(df.windspeed.values.astype(float), 'kph', 'kts') / 0.88
+    lat = abs(df.latitude.values.astype(float))
     # Rankine vortex parameter
-    x = 0.1147 + 0.0055 * vmax - 0.001 * (df.latitude.values.astype(float) - 25.0)
+    x = 0.1147 + 0.0055 * vmax - 0.001 * (lat - 25.0)
 
     # climatological value of v500
-    rmax_c = 66.785 - 0.09102 * vmax + 1.0619 * (df.latitude.values.astype(float) - 25.0)
+    rmax_c = 66.785 - 0.09102 * vmax + 1.0619 * (lat - 25.0)
     v500c = vmax * (rmax_c / 500) ** x
 
     # estimated value of v500
-    v500 = vmax * (df.rmax.values.astype(float) / 500) ** x
+    v500 = (df.R34avg.values.astype(float) / 9) - 3
     s = v500 / v500c
+    s = np.clip(s, 0.4, np.inf)
 
     # adjust windspeed for forward motion of storm
     vsrm = vmax - 1.5 * df.translation_speed.values.astype(float) ** 0.63
 
     # estimate the central pressure
-    pc = 23.286 - 0.483 * vsrm - (vsrm / 24.254) ** 2 - 12.587 * s - 0.483 * df.latitude.values.astype(float)
-    pc += df.poci.values.astype(float)
-
+    pc = 23.286 - 0.483 * vsrm - (vsrm / 24.254) ** 2 - 12.587 * s
+    pc += df.poci.values.astype(float) - 0.483 * lat
+    pc[pd.isnull(df.R34avg)] = np.nan
     return pc
 
 
@@ -146,6 +150,7 @@ def translation_speed(df: pd.DataFrame) -> pd.DataFrame:
     #dt = np.diff(df.validtime) / (3600 * np.timedelta64(1, 's'))
     speed = np.zeros(len(df))
     speed[1:] = np.array(dists) / dt[1:]
+    speed[0] = speed[1]
     df['translation_speed'] = speed * 0.54
     return df
 
@@ -248,10 +253,11 @@ def parseFix(fix):
     return series
 
 
-def getWindContours(fix):
+def getWindContours(fix, units='nm'):
     """
     :param fix: :class:`xml.etree.ElementTree.element` containing
     details of the wind contours element of a disturbance fix.
+    :param units: string denoting the output units
     """
     data = {}
     for elem in fix.findall('cycloneData/windContours/windSpeed'):
@@ -259,8 +265,12 @@ def getWindContours(fix):
         for r in elem.findall('radius'):
             quadrant = r.attrib['sector']
             distance = float(r.text)
-            data[f"R{mag:d}{quadrant}"] = distance
-    return pd.Series(data, index=RADII_COLUMNS)
+            inunits = r.attrib['units']
+            data[f"R{mag:d}{quadrant}"] = convert(distance, inunits, units)
+
+    data = pd.Series(data, index=RADII_COLUMNS)
+    data['R34avg'] = np.nanmean(data[['R34NEQ', 'R34SEQ', 'R34SWQ', 'R34NWQ']])
+    return data
 
 
 def getHeaderTime(header, field="baseTime"):
@@ -365,7 +375,6 @@ def parseEnsemble(data: list) -> list:
     """
     forecasts = []
     for d in data:
-        log.debug(f"Ensemble member: {d.attrib['member']}")
         member = d.attrib['member']
         disturbance = d.find('disturbance')
         distId, tcId, tcName = parseDisturbance(disturbance)
@@ -379,8 +388,9 @@ def parseEnsemble(data: list) -> list:
         df['member'] = member
 
         df = translation_speed(df)
-        df.pcentre.values[pd.isnull(df.pcentre)] = estimate_pcentre(df[pd.isnull(df.pcentre)])
+        df.pcentre.values[pd.isnull(df.pcentre)] = estimate_mslp(df[pd.isnull(df.pcentre)])
         forecasts.append(df)
+        break
 
     return forecasts
 

@@ -1,5 +1,5 @@
 
-import os
+import numpy as np
 import unittest
 from datetime import datetime, timedelta
 import pycxml
@@ -144,7 +144,7 @@ class TestGetPoci(unittest.TestCase):
             self.assertAlmostEqual(pycxml.pycxml.getPoci(inelem), out)
 
     def testMissingData(self):
-        self.assertIsNone(pycxml.pycxml.getPoci(self.missingpocielem))
+        assert 1013.25 == pycxml.pycxml.getPoci(self.missingpocielem)
 
 
 class TestGetRadiusMaxWind(unittest.TestCase):
@@ -200,6 +200,7 @@ class TestWindContours(unittest.TestCase):
             </cycloneData>
             </fix>""")
         windradii = {
+            'R34avg': 62.5,
             'R34NEQ': 70.,
             'R34SEQ': 70.,
             'R34SWQ': 60.,
@@ -208,7 +209,7 @@ class TestWindContours(unittest.TestCase):
             'R48SEQ': 20,
         }
         self.windradii = pd.Series(windradii,
-                                   index=pycxml.pycxml.RADII_COLUMNS)
+                                   index=pycxml.pycxml.RADII_COLUMNS, dtype=object)
 
     def testwindcontours(self):
         assert_series_equal(
@@ -335,6 +336,21 @@ class TestGetHeaderCenter(unittest.TestCase):
     def testSubCenter(self):
         result = pycxml.pycxml.getHeaderCenter(self.testxmlheadersubcentre)
         self.assertEqual(result, "TEST CENTER - TCWC")
+
+
+class TestEstimateMslp(unittest.TestCase):
+
+    def setUp(self):
+        self.df = pd.DataFrame()
+        self.df['windspeed'] = np.array([72, 121])
+        self.df['latitude'] = np.array([-10, -20])
+        self.df['translation_speed'] = np.array([5, 20])
+        self.df['R34avg'] = np.array([25, 40])
+        self.df['poci'] = np.array([1013, 1013])
+
+    def test_mslp(self):
+        mslp = pycxml.pycxml.estimate_mslp(self.df)
+        assert np.allclose(np.array([1004.35429, 983.4766]), mslp)
 
 
 if __name__ == '__main__':
