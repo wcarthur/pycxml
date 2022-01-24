@@ -5,8 +5,7 @@ pycxml - A python translator for Cyclone XML (cxml)
 """
 
 import os
-import sys
-from itertools import product
+from vincenty import vincenty
 from datetime import datetime
 
 import numpy as np
@@ -15,19 +14,48 @@ import xml.etree.ElementTree as ET
 
 import logging as log
 
-from validator import Validator, CXML_SCHEMA
-from converter import convert
+from pycxml.validator import Validator, CXML_SCHEMA
+from pycxml.converter import convert
 
 
 DATEFMT = "%Y-%m-%dT%H:%M:%SZ"
-FORECAST_COLUMNS = ["disturbance", "validtime", "latitude",
-                    "longitude", "pcentre", "windspeed", "rmax", "poci"]
-ENSEMBLE_COLUMNS = ["disturbance", "member", "validtime", "latitude",
-                    "longitude", "pcentre", "windspeed", "rmax", "poci"]
+FORECAST_COLUMNS = [
+    "disturbance",
+    "validtime",
+    "latitude",
+    "longitude",
+    "pcentre",
+    "windspeed",
+    "rmax",
+    "poci",
+]
+ENSEMBLE_COLUMNS = [
+    "disturbance",
+    "member",
+    "validtime",
+    "latitude",
+    "longitude",
+    "pcentre",
+    "windspeed",
+    "rmax",
+    "poci",
+]
 
-RADII_COLUMNS = ['R34NEQ', 'R34SEQ', 'R34SWQ', 'R34NWQ',
-                 'R48NEQ', 'R48SEQ', 'R48SWQ', 'R48NWQ',
-                 'R64NEQ', 'R64SEQ', 'R64SWQ', 'R64NWQ']
+RADII_COLUMNS = [
+    "R34avg",
+    "R34NEQ",
+    "R34SEQ",
+    "R34SWQ",
+    "R34NWQ",
+    "R48NEQ",
+    "R48SEQ",
+    "R48SWQ",
+    "R48NWQ",
+    "R64NEQ",
+    "R64SEQ",
+    "R64SWQ",
+    "R64NWQ",
+]
 
 
 def validate(xmlfile):
@@ -65,18 +93,18 @@ def parsePosition(lonelem, latelem):
     """
 
     latvalue = float(latelem.text)
-    latunits = latelem.attrib['units']
-    latvalue = -latvalue if latunits == 'deg S' else latvalue
+    latunits = latelem.attrib["units"]
+    latvalue = -latvalue if latunits == "deg S" else latvalue
 
     lonvalue = float(lonelem.text)
-    lonunits = lonelem.attrib['units']
-    lonvalue = -lonvalue if lonunits == 'deg W' else lonvalue
+    lonunits = lonelem.attrib["units"]
+    lonvalue = -lonvalue if lonunits == "deg W" else lonvalue
     lonvalue = np.mod(lonvalue, 360)
 
     return (lonvalue, latvalue)
 
 
-def getMSLP(fix, units='hPa'):
+def getMSLP(fix, units="hPa"):
     """
     From a `fix` element, extract the minimum pressure and return the value,
     converted to hPa. We make the assumption that the `units` attribute exists
@@ -89,17 +117,76 @@ def getMSLP(fix, units='hPa'):
     :returns: Minimum pressure, in specified units, if it exists. None
     otherwise.
     """
-    mslpelem = fix.find('./cycloneData/minimumPressure/pressure')
+    mslpelem = fix.find("./cycloneData/minimumPressure/pressure")
     if mslpelem is not None:
         mslp = float(mslpelem.text)
-        inunits = mslpelem.attrib['units']
+        inunits = mslpelem.attrib["units"]
         return convert(mslp, inunits, units)
     else:
         # log.warning("No minimum pressure data in this fix")
         return None
 
 
-def getWindSpeed(fix, units='km/h'):
+def estimate_mslp(df: pd.DataFrame) -> np.array:
+    """
+    Estimate the minimum central  pressure of the a cyclone from its
+    other values. This uses the approach of Courtney and Knaff (2009).
+
+    :param df: dataframe that at a minimum should contain:
+        - maximum windspeed in kph
+        - latitude in degrees
+        - translation speed in knots
+        - pressure of last closed isobar in hPa
+        - r34 in nautical miles
+
+    """
+
+    # convert units form kmh to kts
+    # and convert 10-minute mean to 1-minute mean
+    vmax = convert(df.windspeed.values.astype(float), "kph", "kts") / 0.88
+    lat = abs(df.latitude.values.astype(float))
+    # Rankine vortex parameter
+    x = 0.1147 + 0.0055 * vmax - 0.001 * (lat - 25.0)
+
+    # climatological value of v500
+    rmax_c = 66.785 - 0.09102 * vmax + 1.0619 * (lat - 25.0)
+    v500c = vmax * (rmax_c / 500) ** x
+
+    # estimated value of v500
+    v500 = (df.R34avg.values.astype(float) / 9) - 3
+    s = v500 / v500c
+    s = np.clip(s, 0.4, np.inf)
+
+    # adjust windspeed for forward motion of storm
+    vsrm = vmax - 1.5 * df.translation_speed.values.astype(float) ** 0.63
+
+    # estimate the central pressure
+    pc = 23.286 - 0.483 * vsrm - (vsrm / 24.254) ** 2 - 12.587 * s
+    pc += df.poci.values.astype(float) - 0.483 * lat
+    pc[pd.isnull(df.R34avg)] = np.nan
+    return pc
+
+
+def translation_speed(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Update the data frame to include storm translation speed
+
+    :param df: `pd.DataFrame` containing track details
+        (latitude, longitude, timestamp, etc.)
+    """
+    coords = df[["longitude", "latitude"]].values
+    dists = [vincenty(coords[i], coords[i + 1])
+             for i in range(len(coords) - 1)]
+    dt = df.validtime.diff().dt.seconds.values / 3600
+    # dt = np.diff(df.validtime) / (3600 * np.timedelta64(1, 's'))
+    speed = np.zeros(len(df))
+    speed[1:] = np.array(dists) / dt[1:]
+    speed[0] = speed[1]
+    df["translation_speed"] = speed * 0.54
+    return df
+
+
+def getWindSpeed(fix, units="km/h"):
     """
     From a `fix` element, extract the maximum wind speed and return the value,
     converted to the given units.
@@ -110,10 +197,10 @@ def getWindSpeed(fix, units='km/h'):
 
     :returns: maximum wind speed, in given units, if it exists. None otherwise.
     """
-    windelem = fix.find('./cycloneData/maximumWind/speed')
+    windelem = fix.find("./cycloneData/maximumWind/speed")
     if windelem is not None:
         wind = float(windelem.text)
-        inunits = windelem.attrib['units']
+        inunits = windelem.attrib["units"]
         return convert(wind, inunits, units)
     else:
         log.warning("No maximum wind speed data in this fix")
@@ -131,14 +218,14 @@ def getPoci(fix):
     :returns: Pressure of outermost closed isobar, in hPa, if it exists. None
     otherwise.
     """
-    pocielem = fix.find('./cycloneData/lastClosedIsobar/pressure')
+    pocielem = fix.find("./cycloneData/lastClosedIsobar/pressure")
     if pocielem is not None:
         poci = float(pocielem.text)
-        units = pocielem.attrib['units']
-        return convert(poci, units, 'hPa')
+        units = pocielem.attrib["units"]
+        return convert(poci, units, "hPa")
     else:
         # log.warning("No pressure of outer isobar data in this fix")
-        return None
+        return 1013.25
 
 
 def getRmax(fix):
@@ -152,11 +239,11 @@ def getRmax(fix):
     :returns: Radius to maximum winds, in km
     """
 
-    rmwelem = fix.find('./cycloneData/maximumWind/radius')
+    rmwelem = fix.find("./cycloneData/maximumWind/radius")
     if rmwelem is not None:
         rmw = float(rmwelem.text)
-        units = rmwelem.attrib['units']
-        return convert(rmw, units, 'km')
+        units = rmwelem.attrib["units"]
+        return convert(rmw, units, "km")
     else:
         log.warning("No rmw data in this fix")
         return None
@@ -179,37 +266,43 @@ def parseFix(fix):
     # These are the only two mandatory elements of a fix.
     # Every other element is optional
     fixdata = {}
-    fixdata['validtime'] = getHeaderTime(fix, 'validTime')
-    fixdata['longitude'], fixdata['latitude'] = parsePosition(
-        fix.find('longitude'), fix.find('latitude'))
+    fixdata["validtime"] = getHeaderTime(fix, "validTime")
+    fixdata["longitude"], fixdata["latitude"] = parsePosition(
+        fix.find("longitude"), fix.find("latitude")
+    )
 
     # Other elements, may not be present:
-    fixdata['pcentre'] = getMSLP(fix)
-    fixdata['windspeed'] = getWindSpeed(fix)
-    fixdata['rmax'] = getRmax(fix)
-    fixdata['poci'] = getPoci(fix)
+    fixdata["pcentre"] = getMSLP(fix)
+    fixdata["windspeed"] = getWindSpeed(fix)
+    fixdata["rmax"] = getRmax(fix)
+    fixdata["poci"] = getPoci(fix)
     series = pd.Series(fixdata, index=FORECAST_COLUMNS)
-    if fix.find('./cycloneData/windContours'):
+    if fix.find("./cycloneData/windContours"):
         windradii = getWindContours(fix)
         fixdata = pd.concat([series, windradii])
-        series = pd.Series(fixdata, index=FORECAST_COLUMNS+RADII_COLUMNS)
+        series = pd.Series(fixdata, index=FORECAST_COLUMNS + RADII_COLUMNS)
 
     return series
 
 
-def getWindContours(fix):
+def getWindContours(fix, units="nm"):
     """
     :param fix: :class:`xml.etree.ElementTree.element` containing
     details of the wind contours element of a disturbance fix.
+    :param units: string denoting the output units
     """
     data = {}
-    for elem in fix.findall('cycloneData/windContours/windSpeed'):
+    for elem in fix.findall("cycloneData/windContours/windSpeed"):
         mag = int(float(elem.text))
-        for r in elem.findall('radius'):
-            quadrant = r.attrib['sector']
+        for r in elem.findall("radius"):
+            quadrant = r.attrib["sector"]
             distance = float(r.text)
-            data[f"R{mag:d}{quadrant}"] = distance
-    return pd.Series(data, index=RADII_COLUMNS)
+            inunits = r.attrib["units"]
+            data[f"R{mag:d}{quadrant}"] = convert(distance, inunits, units)
+
+    data = pd.Series(data, index=RADII_COLUMNS)
+    data["R34avg"] = np.nanmean(data[["R34NEQ", "R34SEQ", "R34SWQ", "R34NWQ"]])
+    return data
 
 
 def getHeaderTime(header, field="baseTime"):
@@ -254,8 +347,8 @@ def getHeaderCenter(header):
     information for the CXML file being processed.
     """
     centre = header.find("productionCenter").text
-    if header.find('productionCenter/subCenter') is not None:
-        subCentre = header.find('productionCenter/subCenter').text
+    if header.find("productionCenter/subCenter") is not None:
+        subCentre = header.find("productionCenter/subCenter").text
         centre = f"{centre} - {subCentre}"
 
     return centre
@@ -287,7 +380,7 @@ def isEnsemble(header):
 
     :returns: `True` if this represents an ensemble forecast, False otherwise.
     """
-    if header.find('generatingApplication/ensemble') is not None:
+    if header.find("generatingApplication/ensemble") is not None:
         return True
     else:
         return False
@@ -302,7 +395,7 @@ def ensembleCount(ensembleElem):
     :returns: Number of ensemble members
     """
 
-    nmembers = ensembleElem.find('numMembers')
+    nmembers = ensembleElem.find("numMembers")
     return int(nmembers.text)
 
 
@@ -314,20 +407,25 @@ def parseEnsemble(data: list) -> list:
     """
     forecasts = []
     for d in data:
-        log.debug(f"Ensemble member: {d.attrib['member']}")
-        member = d.attrib['member']
-        disturbance = d.find('disturbance')
+        member = d.attrib["member"]
+        disturbance = d.find("disturbance")
         distId, tcId, tcName = parseDisturbance(disturbance)
-        df = pd.DataFrame(columns=ENSEMBLE_COLUMNS+RADII_COLUMNS)
+        df = pd.DataFrame(columns=ENSEMBLE_COLUMNS + RADII_COLUMNS)
         fixes = disturbance.findall("./fix")
         log.debug(f"Disturbance {distId}: number of fixes: {len(fixes)}")
         for f in fixes:
             fixdata = parseFix(f)
             df.loc[len(df), :] = fixdata
         df["disturbance"] = distId
-        df['member'] = member
+        df["member"] = member
 
+        df = translation_speed(df)
+        df.pcentre.values[pd.isnull(df.pcentre)] = estimate_mslp(
+            df[pd.isnull(df.pcentre)]
+        )
         forecasts.append(df)
+        break
+
     return forecasts
 
 
@@ -340,16 +438,16 @@ def parseForecast(data) -> pd.DataFrame:
 
     :returns: `pd.DataFrame` of the forecast data.
     """
-    disturbance = data.find('disturbance')
+    disturbance = data.find("disturbance")
     distId, tcId, tcName = parseDisturbance(disturbance)
-    df = pd.DataFrame(columns=FORECAST_COLUMNS+RADII_COLUMNS)
+    df = pd.DataFrame(columns=FORECAST_COLUMNS + RADII_COLUMNS)
     fixes = disturbance.findall("./fix")
     log.debug(f"Disturbance {distId}: number of fixes: {len(fixes)}")
 
     for f in fixes:
         fixdata = parseFix(f)
         df.loc[len(df), :] = fixdata
-    df['disturbance'] = distId
+    df["disturbance"] = distId
     return df
 
 
@@ -367,16 +465,16 @@ def parseDisturbance(dist):
     :returns: :class:`pandas.DataFrame` containing analysis and forecast data
     for a disturbance
     """
-    distId = dist.attrib['ID']
+    distId = dist.attrib["ID"]
 
-    if dist.find('localId') is not None:
-        tcId = dist.find('localId').text
+    if dist.find("localId") is not None:
+        tcId = dist.find("localId").text
     else:
         log.debug("No localId attribute given")
         tcId = ""
 
-    if dist.find('cycloneName') is not None:
-        tcName = dist.find('cycloneName').text
+    if dist.find("cycloneName") is not None:
+        tcName = dist.find("cycloneName").text
     else:
         log.debug("No cycloneName attribute given")
         tcName = ""
@@ -409,10 +507,10 @@ def loadfile(xmlfile):
 
     tree = ET.parse(xmlfile)
     xroot = tree.getroot()
-    header = xroot.find('header')
+    header = xroot.find("header")
 
     if isEnsemble(header):
-        ensembleElem = header.find('generatingApplication/ensemble')
+        ensembleElem = header.find("generatingApplication/ensemble")
         nmembers = ensembleCount(ensembleElem)
         log.info(f"This is an ensemble forecast with {nmembers} members")
         data = xroot.findall("./data")
@@ -421,9 +519,9 @@ def loadfile(xmlfile):
     else:
         data = xroot.findall("./data")
         for d in data:
-            if d.attrib['type'] == 'forecast':
+            if d.attrib["type"] == "forecast":
                 forecast = parseForecast(d)
                 return forecast
-            elif d.attrib['type'] == 'analysis':
+            elif d.attrib["type"] == "analysis":
                 analysis = parseAnalysis(d)
                 return analysis

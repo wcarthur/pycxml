@@ -1,42 +1,58 @@
-import os
-import sys
 import unittest
 from numpy import array, arange, pi
 import NumpyTestCase
-from converter import convert
+from pycxml.converter import convert
 
 
 class TestConvert(NumpyTestCase.NumpyTestCase):
-    lat = array(arange(0, -21, -1, 'd'))
+    lat = array(arange(0, -21, -1, "d"))
 
-    f = array([0.00000000e+00,  -2.53834962e-06,  -5.07592604e-06,
-               -7.61195628e-06,  -1.01456678e-05,  -1.26762889e-05,
-               -1.52030487e-05,  -1.77251775e-05,  -2.02419070e-05,
-               -2.27524707e-05,  -2.52561037e-05,  -2.77520434e-05,
-               -3.02395297e-05,  -3.27178046e-05,  -3.51861134e-05,
-               -3.76437042e-05,  -4.00898283e-05,  -4.25237407e-05,
-               -4.49447000e-05,  -4.73519686e-05,  -4.97448134e-05])
+    f = array(
+        [
+            0.00000000e00,
+            -2.53834962e-06,
+            -5.07592604e-06,
+            -7.61195628e-06,
+            -1.01456678e-05,
+            -1.26762889e-05,
+            -1.52030487e-05,
+            -1.77251775e-05,
+            -2.02419070e-05,
+            -2.27524707e-05,
+            -2.52561037e-05,
+            -2.77520434e-05,
+            -3.02395297e-05,
+            -3.27178046e-05,
+            -3.51861134e-05,
+            -3.76437042e-05,
+            -4.00898283e-05,
+            -4.25237407e-05,
+            -4.49447000e-05,
+            -4.73519686e-05,
+            -4.97448134e-05,
+        ]
+    )
 
     def test_mps2kmphr(self):
         """Convert from m/s to km/h"""
-        self.assertEqual(convert(0, "mps", "kph"), 0.)
+        self.assertEqual(convert(0, "mps", "kph"), 0.0)
         self.assertEqual(convert(1, "mps", "kph"), 3.6)
-        self.assertEqual(convert(5, "mps", "kph"), 18.)
-        self.assertEqual(convert(15, "mps", "kph"), 54.)
-        self.assertEqual(convert(100, "mps", "kph"), 360.)
-        self.assertEqual(convert(0, "m/s", "kmh"), 0.)
+        self.assertEqual(convert(5, "mps", "kph"), 18.0)
+        self.assertEqual(convert(15, "mps", "kph"), 54.0)
+        self.assertEqual(convert(100, "mps", "kph"), 360.0)
+        self.assertEqual(convert(0, "m/s", "kmh"), 0.0)
         self.assertEqual(convert(1, "m/s", "kmh"), 3.6)
-        self.assertEqual(convert(5, "m/s", "km/h"), 18.)
-        self.assertEqual(convert(15, "m s-1", "km/h"), 54.)
-        self.assertEqual(convert(100, "m s-1", "km/h"), 360.)
+        self.assertEqual(convert(5, "m/s", "km/h"), 18.0)
+        self.assertEqual(convert(15, "m s-1", "km/h"), 54.0)
+        self.assertEqual(convert(100, "m s-1", "km/h"), 360.0)
 
     def test_kmh2mps(self):
         """Convert from km/h to m/s"""
         self.assertAlmostEqual(convert(3.6, "kph", "m/s"), 1.0, 3)
-        self.assertAlmostEqual(convert(36., "km/h", 'm/s'), 10., 3)
-        self.assertAlmostEqual(convert(36., "kmh", 'm/s'), 10., 3)
-        self.assertAlmostEqual(convert(36., "kmh", 'mps'), 10., 3)
-        self.assertAlmostEqual(convert(36., "kmh", 'm s-1'), 10., 3)
+        self.assertAlmostEqual(convert(36.0, "km/h", "m/s"), 10.0, 3)
+        self.assertAlmostEqual(convert(36.0, "kmh", "m/s"), 10.0, 3)
+        self.assertAlmostEqual(convert(36.0, "kmh", "mps"), 10.0, 3)
+        self.assertAlmostEqual(convert(36.0, "kmh", "m s-1"), 10.0, 3)
 
     def test_knots2kmh(self):
         """Convert from knots to km/h"""
@@ -46,26 +62,32 @@ class TestConvert(NumpyTestCase.NumpyTestCase):
 
     def test_kmh2knots(self):
         """Convert from kmh to knots"""
-        self.assertAlmostEqual(convert(1.852, "kmh", "kts"), 1., 5)
-        self.assertAlmostEqual(convert(18.52, "km/h", "kt"), 10., 5)
-        self.assertAlmostEqual(convert(18.52, "km/h", "kn"), 10., 5)
+        self.assertAlmostEqual(convert(1.852, "kmh", "kts"), 1.0, 5)
+        self.assertAlmostEqual(convert(18.52, "km/h", "kt"), 10.0, 5)
+        self.assertAlmostEqual(convert(18.52, "km/h", "kn"), 10.0, 5)
 
     def test_km2deg(self):
         """Convert distance in km to distance in degrees"""
         self.assertEqual(convert(0, "km", "deg"), 0)
-        self.assertAlmostEqual(convert(1, "km", "deg"), 360/(2*pi*6367), 3)
-        self.assertAlmostEqual(convert(2, "km", "deg"), 720/(2*pi*6367), 3)
-        self.assertAlmostEqual(convert(10, "km", "deg"), 3600/(2*pi*6367), 3)
+        self.assertAlmostEqual(convert(1, "km", "deg"),
+                               360 / (2 * pi * 6367), 3)
+        self.assertAlmostEqual(convert(2, "km", "deg"),
+                               720 / (2 * pi * 6367), 3)
+        self.assertAlmostEqual(convert(10, "km", "deg"),
+                               3600 / (2 * pi * 6367), 3)
 
     def test_deg2km(self):
         """Convert distance in degrees to distance in km"""
         self.assertEqual(convert(0, "deg", "km"), 0)
-        self.assertAlmostEqual(convert(1, "deg", "km"),
-                               (1/(360/(2*pi*6367))), 3)
-        self.assertAlmostEqual(convert(2, "deg", "km"),
-                               (2/(360/(2*pi*6367))), 3)
-        self.assertAlmostEqual(convert(10, "deg", "km"),
-                               (10/(360/(2*pi*6367))), 3)
+        self.assertAlmostEqual(
+            convert(1, "deg", "km"), (1 / (360 / (2 * pi * 6367))), 3
+        )
+        self.assertAlmostEqual(
+            convert(2, "deg", "km"), (2 / (360 / (2 * pi * 6367))), 3
+        )
+        self.assertAlmostEqual(
+            convert(10, "deg", "km"), (10 / (360 / (2 * pi * 6367))), 3
+        )
 
     def test_km2m(self):
         """Convert distance in km to distance in m"""
@@ -75,12 +97,12 @@ class TestConvert(NumpyTestCase.NumpyTestCase):
     def test_m2km(self):
         """Convert distance in m to distance in km"""
         self.assertEqual(convert(0, "m", "km"), 0)
-        self.assertAlmostEqual(convert(1000., "m", "km"), 1.)
-        self.assertAlmostEqual(convert(10000., "m", "km"), 10.)
+        self.assertAlmostEqual(convert(1000.0, "m", "km"), 1.0)
+        self.assertAlmostEqual(convert(10000.0, "m", "km"), 10.0)
 
     def test_m2nm(self):
         self.assertEqual(convert(0, "m", "nm"), 0)
-        self.assertAlmostEqual(convert(1000., "m", "nm"), 0.539957)
+        self.assertAlmostEqual(convert(1000.0, "m", "nm"), 0.539957)
 
     def test_hPa2Pa(self):
         """Convert pressure from hPa to Pa"""

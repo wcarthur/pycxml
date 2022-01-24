@@ -21,22 +21,24 @@ class TestCodeFormat(unittest.TestCase):
         # as can be passed to the "pep8" tool's exclude list.
 
         pep8style = pycodestyle.StyleGuide(quiet=False)
-        pep8style.options.exclude.extend(['*/_version.py'])
+        pep8style.options.exclude.extend(["*/_version.py"])
 
         # Allow users to add their own exclude list.
-        extra_exclude_file = os.path.join(os.path.dirname(__file__),
-                                          '.pep8_test_exclude.txt')
+        extra_exclude_file = os.path.join(
+            os.path.dirname(__file__), ".pep8_test_exclude.txt"
+        )
         if os.path.exists(extra_exclude_file):
-            with open(extra_exclude_file, 'r') as fhandle:
+            with open(extra_exclude_file, "r") as fhandle:
                 extra_exclude = [line.strip()
                                  for line in fhandle if line.strip()]
             pep8style.options.exclude.extend(extra_exclude)
 
         root = os.path.abspath(pycxml.__file__)
         result = pep8style.check_files([os.path.dirname(root)])
-        self.assertEqual(result.total_errors, 0, "Found code syntax "
-                                                 "errors (and warnings).")
+        self.assertEqual(
+            result.total_errors, 0, "Found code syntax " "errors (and warnings)."
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

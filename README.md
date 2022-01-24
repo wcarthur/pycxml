@@ -18,7 +18,24 @@ CXML XML Schema Definition: http://www.bom.gov.au/cyclone/cxmlinfo/cxml.1.3.xsd
 
 ## Installation
 
+Clone the repo, `cd` into the top directory and run:
+
+    pip install .
+
+To check that the installation has worked correctly run the tests:
+
+    pytest tests
+
 ## Dependencies
+
+This package requires:
+
+- `numpy`
+- `pandas
+- `lxml`
+
+The tests additionally require `pycodestyle`. All of these will 
+be automatically downloaded and installed in the installation step.
 
 ## Usage
 

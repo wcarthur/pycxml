@@ -5,7 +5,6 @@ import xml.etree.ElementTree as ET
 
 
 class TestValidation(unittest.TestCase):
-
     def setUp(self):
         # The basic example CXML file from BoM is actually invalid!
         self.xml_file = "./tests/test_data/CXML_example.xml"
@@ -18,5 +17,5 @@ class TestValidation(unittest.TestCase):
         self.assertRaises(IOError, pycxml.validate, self.missing_file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
