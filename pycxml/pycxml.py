@@ -424,7 +424,6 @@ def parseEnsemble(data: list) -> list:
             df[pd.isnull(df.pcentre)]
         )
         forecasts.append(df)
-        break
 
     return forecasts
 
