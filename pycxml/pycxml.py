@@ -14,8 +14,9 @@ import xml.etree.ElementTree as ET
 
 import logging as log
 
-from pycxml.validator import Validator, CXML_SCHEMA
-from pycxml.converter import convert
+from .validator import Validator, CXML_SCHEMA
+from .converter import convert
+from .converter import convert
 
 
 DATEFMT = "%Y-%m-%dT%H:%M:%SZ"
