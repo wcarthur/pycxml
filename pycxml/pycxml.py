@@ -16,7 +16,6 @@ import logging as log
 
 from .validator import Validator, CXML_SCHEMA
 from .converter import convert
-from .converter import convert
 
 
 DATEFMT = "%Y-%m-%dT%H:%M:%SZ"
