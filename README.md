@@ -2,7 +2,7 @@
 
 CycloneXML ("CXML") is an XML data model used to exchange tropical cyclone
 related analysis and forecast information. Currently the Australian Bureau of
-Meteorology is responsible for maintenance and improvements to CXML. 
+Meteorology is responsible for maintenance and improvements to CXML.
 
 This package is a python interface to the data model, to validate, read, and
 write CXML data. Currently based on CXML version 1.3.
@@ -31,10 +31,11 @@ To check that the installation has worked correctly run the tests:
 This package requires:
 
 - `numpy`
-- `pandas
+- `pandas`
 - `lxml`
+- `vincenty`
 
-The tests additionally require `pycodestyle`. All of these will 
+The tests additionally require `pycodestyle`. All of these will
 be automatically downloaded and installed in the installation step.
 
 ## Usage
@@ -47,7 +48,7 @@ datatype, in that there are multiple members for each forecast.
 ### Reading a CXML file
 
 To read a CXML file, use the `pycxml.loadfile` function. Data are returned as a
-`pandas.DataFrame`
+`pandas.DataFrame`::
 
 >>> import pycxml
 >>> pycxml.loadfile('./test_data/CXML_example.xml')
@@ -58,7 +59,7 @@ To read a CXML file, use the `pycxml.loadfile` function. Data are returned as a
 
 The Cyclone XML site contains some basic examples of CXML data. Additional
 (operational) data can be accessed via the UCAR Research Data Archive, dataset
-[ds330.3](https://rda.ucar.edu/datasets/ds330.3/index.html). 
+[ds330.3](https://rda.ucar.edu/datasets/ds330.3/index.html).
 
 ## Contact information
 

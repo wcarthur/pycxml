@@ -15,7 +15,7 @@ def convert(value, inunits, outunits):
 
     """
     startValue = value
-    value = ma.array(value, dtype=float)
+    #value = ma.array(value, dtype=float)
     if inunits == outunits:
         # Do nothing:
         return value
